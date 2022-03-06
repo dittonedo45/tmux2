@@ -31,87 +31,97 @@
  * Saves a paste buffer to a file.
  */
 
-static enum cmd_retval	cmd_save_buffer_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_save_buffer_exec (struct cmd *,
+					     struct cmdq_item *);
 
 const struct cmd_entry cmd_save_buffer_entry = {
-	.name = "save-buffer",
-	.alias = "saveb",
+  .name = "save-buffer",
+  .alias = "saveb",
 
-	.args = { "ab:", 1, 1 },
-	.usage = "[-a] " CMD_BUFFER_USAGE " path",
+  .args = {"ab:", 1, 1},
+  .usage = "[-a] " CMD_BUFFER_USAGE " path",
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_save_buffer_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_save_buffer_exec
 };
 
 const struct cmd_entry cmd_show_buffer_entry = {
-	.name = "show-buffer",
-	.alias = "showb",
+  .name = "show-buffer",
+  .alias = "showb",
 
-	.args = { "b:", 0, 0 },
-	.usage = CMD_BUFFER_USAGE,
+  .args = {"b:", 0, 0},
+  .usage = CMD_BUFFER_USAGE,
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_save_buffer_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_save_buffer_exec
 };
 
 static void
-cmd_save_buffer_done(__unused struct client *c, const char *path, int error,
-    __unused int closed, __unused struct evbuffer *buffer, void *data)
+cmd_save_buffer_done (__unused struct client *c, const char *path, int error,
+		      __unused int closed, __unused struct evbuffer *buffer,
+		      void *data)
 {
-	struct cmdq_item	*item = data;
+  struct cmdq_item *item = data;
 
-	if (!closed)
-		return;
+  if (!closed)
+    return;
 
-	if (error != 0)
-		cmdq_error(item, "%s: %s", path, strerror(error));
-	cmdq_continue(item);
+  if (error != 0)
+    cmdq_error (item, "%s: %s", path, strerror (error));
+  cmdq_continue (item);
 }
 
 static enum cmd_retval
-cmd_save_buffer_exec(struct cmd *self, struct cmdq_item *item)
+cmd_save_buffer_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct client		*c = cmdq_get_client(item);
-	struct paste_buffer	*pb;
-	int			 flags;
-	const char		*bufname = args_get(args, 'b'), *bufdata;
-	size_t			 bufsize;
-	char			*path, *tmp;
+  struct args *args = cmd_get_args (self);
+  struct client *c = cmdq_get_client (item);
+  struct paste_buffer *pb;
+  int flags;
+  const char *bufname = args_get (args, 'b'), *bufdata;
+  size_t bufsize;
+  char *path, *tmp;
 
-	if (bufname == NULL) {
-		if ((pb = paste_get_top(NULL)) == NULL) {
-			cmdq_error(item, "no buffers");
-			return (CMD_RETURN_ERROR);
-		}
-	} else {
-		pb = paste_get_name(bufname);
-		if (pb == NULL) {
-			cmdq_error(item, "no buffer %s", bufname);
-			return (CMD_RETURN_ERROR);
-		}
+  if (bufname == NULL)
+    {
+      if ((pb = paste_get_top (NULL)) == NULL)
+	{
+	  cmdq_error (item, "no buffers");
+	  return (CMD_RETURN_ERROR);
 	}
-	bufdata = paste_buffer_data(pb, &bufsize);
+    }
+  else
+    {
+      pb = paste_get_name (bufname);
+      if (pb == NULL)
+	{
+	  cmdq_error (item, "no buffer %s", bufname);
+	  return (CMD_RETURN_ERROR);
+	}
+    }
+  bufdata = paste_buffer_data (pb, &bufsize);
 
-	if (cmd_get_entry(self) == &cmd_show_buffer_entry) {
-		if (c->session != NULL || (c->flags & CLIENT_CONTROL)) {
-			utf8_stravisx(&tmp, bufdata, bufsize,
-			    VIS_OCTAL|VIS_CSTYLE|VIS_TAB);
-			cmdq_print(item, "%s", tmp);
-			free(tmp);
-			return (CMD_RETURN_NORMAL);
-		}
-		path = xstrdup("-");
-	} else
-		path = format_single_from_target(item, args->argv[0]);
-	if (args_has(args, 'a'))
-		flags = O_APPEND;
-	else
-		flags = O_TRUNC;
-	file_write(cmdq_get_client(item), path, flags, bufdata, bufsize,
-	    cmd_save_buffer_done, item);
-	free(path);
+  if (cmd_get_entry (self) == &cmd_show_buffer_entry)
+    {
+      if (c->session != NULL || (c->flags & CLIENT_CONTROL))
+	{
+	  utf8_stravisx (&tmp, bufdata, bufsize,
+			 VIS_OCTAL | VIS_CSTYLE | VIS_TAB);
+	  cmdq_print (item, "%s", tmp);
+	  free (tmp);
+	  return (CMD_RETURN_NORMAL);
+	}
+      path = xstrdup ("-");
+    }
+  else
+    path = format_single_from_target (item, args->argv[0]);
+  if (args_has (args, 'a'))
+    flags = O_APPEND;
+  else
+    flags = O_TRUNC;
+  file_write (cmdq_get_client (item), path, flags, bufdata, bufsize,
+	      cmd_save_buffer_done, item);
+  free (path);
 
-	return (CMD_RETURN_WAIT);
+  return (CMD_RETURN_WAIT);
 }

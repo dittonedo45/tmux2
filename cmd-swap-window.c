@@ -26,69 +26,70 @@
  * Swap one window with another.
  */
 
-static enum cmd_retval	cmd_swap_window_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_swap_window_exec (struct cmd *,
+					     struct cmdq_item *);
 
 const struct cmd_entry cmd_swap_window_entry = {
-	.name = "swap-window",
-	.alias = "swapw",
+  .name = "swap-window",
+  .alias = "swapw",
 
-	.args = { "ds:t:", 0, 0 },
-	.usage = "[-d] " CMD_SRCDST_WINDOW_USAGE,
+  .args = {"ds:t:", 0, 0},
+  .usage = "[-d] " CMD_SRCDST_WINDOW_USAGE,
 
-	.source = { 's', CMD_FIND_WINDOW, CMD_FIND_DEFAULT_MARKED },
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .source = {'s', CMD_FIND_WINDOW, CMD_FIND_DEFAULT_MARKED},
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = 0,
-	.exec = cmd_swap_window_exec
+  .flags = 0,
+  .exec = cmd_swap_window_exec
 };
 
 static enum cmd_retval
-cmd_swap_window_exec(struct cmd *self, struct cmdq_item *item)
+cmd_swap_window_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*source = cmdq_get_source(item);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct session		*src = source->s, *dst = target->s;
-	struct session_group	*sg_src, *sg_dst;
-	struct winlink		*wl_src = source->wl, *wl_dst = target->wl;
-	struct window		*w_src, *w_dst;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *source = cmdq_get_source (item);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct session *src = source->s, *dst = target->s;
+  struct session_group *sg_src, *sg_dst;
+  struct winlink *wl_src = source->wl, *wl_dst = target->wl;
+  struct window *w_src, *w_dst;
 
-	sg_src = session_group_contains(src);
-	sg_dst = session_group_contains(dst);
+  sg_src = session_group_contains (src);
+  sg_dst = session_group_contains (dst);
 
-	if (src != dst &&
-	    sg_src != NULL &&
-	    sg_dst != NULL &&
-	    sg_src == sg_dst) {
-		cmdq_error(item, "can't move window, sessions are grouped");
-		return (CMD_RETURN_ERROR);
-	}
+  if (src != dst && sg_src != NULL && sg_dst != NULL && sg_src == sg_dst)
+    {
+      cmdq_error (item, "can't move window, sessions are grouped");
+      return (CMD_RETURN_ERROR);
+    }
 
-	if (wl_dst->window == wl_src->window)
-		return (CMD_RETURN_NORMAL);
+  if (wl_dst->window == wl_src->window)
+    return (CMD_RETURN_NORMAL);
 
-	w_dst = wl_dst->window;
-	TAILQ_REMOVE(&w_dst->winlinks, wl_dst, wentry);
-	w_src = wl_src->window;
-	TAILQ_REMOVE(&w_src->winlinks, wl_src, wentry);
+  w_dst = wl_dst->window;
+  TAILQ_REMOVE (&w_dst->winlinks, wl_dst, wentry);
+  w_src = wl_src->window;
+  TAILQ_REMOVE (&w_src->winlinks, wl_src, wentry);
 
-	wl_dst->window = w_src;
-	TAILQ_INSERT_TAIL(&w_src->winlinks, wl_dst, wentry);
-	wl_src->window = w_dst;
-	TAILQ_INSERT_TAIL(&w_dst->winlinks, wl_src, wentry);
+  wl_dst->window = w_src;
+  TAILQ_INSERT_TAIL (&w_src->winlinks, wl_dst, wentry);
+  wl_src->window = w_dst;
+  TAILQ_INSERT_TAIL (&w_dst->winlinks, wl_src, wentry);
 
-	if (args_has(args, 'd')) {
-		session_select(dst, wl_dst->idx);
-		if (src != dst)
-			session_select(src, wl_src->idx);
-	}
-	session_group_synchronize_from(src);
-	server_redraw_session_group(src);
-	if (src != dst) {
-		session_group_synchronize_from(dst);
-		server_redraw_session_group(dst);
-	}
-	recalculate_sizes();
+  if (args_has (args, 'd'))
+    {
+      session_select (dst, wl_dst->idx);
+      if (src != dst)
+	session_select (src, wl_src->idx);
+    }
+  session_group_synchronize_from (src);
+  server_redraw_session_group (src);
+  if (src != dst)
+    {
+      session_group_synchronize_from (dst);
+      server_redraw_session_group (dst);
+    }
+  recalculate_sizes ();
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

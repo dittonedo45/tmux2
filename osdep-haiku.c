@@ -24,29 +24,29 @@
 #include "tmux.h"
 
 char *
-osdep_get_name(int fd, __unused char *tty)
+osdep_get_name (int fd, __unused char *tty)
 {
-	pid_t		tid;
-	team_info	tinfo;
+  pid_t tid;
+  team_info tinfo;
 
-	if ((tid = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((tid = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	if (get_team_info(tid, &tinfo) != B_OK)
-		return (NULL);
+  if (get_team_info (tid, &tinfo) != B_OK)
+    return (NULL);
 
-	/* Up to the first 64 characters. */
-	return (xstrdup(tinfo.args));
+  /* Up to the first 64 characters. */
+  return (xstrdup (tinfo.args));
 }
 
 char *
-osdep_get_cwd(int fd)
+osdep_get_cwd (int fd)
 {
-	return (NULL);
+  return (NULL);
 }
 
 struct event_base *
-osdep_event_init(void)
+osdep_event_init (void)
 {
-	return (event_init());
+  return (event_init ());
 }

@@ -21,19 +21,19 @@
 #include "tmux.h"
 
 char *
-osdep_get_name(__unused int fd, __unused char *tty)
+osdep_get_name (__unused int fd, __unused char *tty)
 {
-	return (NULL);
+  return (NULL);
 }
 
 char *
-osdep_get_cwd(__unused int fd)
+osdep_get_cwd (__unused int fd)
 {
-	return (NULL);
+  return (NULL);
 }
 
 struct event_base *
-osdep_event_init(void)
+osdep_event_init (void)
 {
-	return (event_init());
+  return (event_init ());
 }

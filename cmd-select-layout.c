@@ -26,123 +26,129 @@
  * Switch window to selected layout.
  */
 
-static enum cmd_retval	cmd_select_layout_exec(struct cmd *,
-			    struct cmdq_item *);
+static enum cmd_retval cmd_select_layout_exec (struct cmd *,
+					       struct cmdq_item *);
 
 const struct cmd_entry cmd_select_layout_entry = {
-	.name = "select-layout",
-	.alias = "selectl",
+  .name = "select-layout",
+  .alias = "selectl",
 
-	.args = { "Enopt:", 0, 1 },
-	.usage = "[-Enop] " CMD_TARGET_PANE_USAGE " [layout-name]",
+  .args = {"Enopt:", 0, 1},
+  .usage = "[-Enop] " CMD_TARGET_PANE_USAGE " [layout-name]",
 
-	.target = { 't', CMD_FIND_PANE, 0 },
+  .target = {'t', CMD_FIND_PANE, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_select_layout_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_select_layout_exec
 };
 
 const struct cmd_entry cmd_next_layout_entry = {
-	.name = "next-layout",
-	.alias = "nextl",
+  .name = "next-layout",
+  .alias = "nextl",
 
-	.args = { "t:", 0, 0 },
-	.usage = CMD_TARGET_WINDOW_USAGE,
+  .args = {"t:", 0, 0},
+  .usage = CMD_TARGET_WINDOW_USAGE,
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_select_layout_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_select_layout_exec
 };
 
 const struct cmd_entry cmd_previous_layout_entry = {
-	.name = "previous-layout",
-	.alias = "prevl",
+  .name = "previous-layout",
+  .alias = "prevl",
 
-	.args = { "t:", 0, 0 },
-	.usage = CMD_TARGET_WINDOW_USAGE,
+  .args = {"t:", 0, 0},
+  .usage = CMD_TARGET_WINDOW_USAGE,
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_select_layout_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_select_layout_exec
 };
 
 static enum cmd_retval
-cmd_select_layout_exec(struct cmd *self, struct cmdq_item *item)
+cmd_select_layout_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct winlink		*wl = target->wl;
-	struct window		*w = wl->window;
-	struct window_pane	*wp = target->wp;
-	const char		*layoutname;
-	char			*oldlayout;
-	int			 next, previous, layout;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct winlink *wl = target->wl;
+  struct window *w = wl->window;
+  struct window_pane *wp = target->wp;
+  const char *layoutname;
+  char *oldlayout;
+  int next, previous, layout;
 
-	server_unzoom_window(w);
+  server_unzoom_window (w);
 
-	next = (cmd_get_entry(self) == &cmd_next_layout_entry);
-	if (args_has(args, 'n'))
-		next = 1;
-	previous = (cmd_get_entry(self) == &cmd_previous_layout_entry);
-	if (args_has(args, 'p'))
-		previous = 1;
+  next = (cmd_get_entry (self) == &cmd_next_layout_entry);
+  if (args_has (args, 'n'))
+    next = 1;
+  previous = (cmd_get_entry (self) == &cmd_previous_layout_entry);
+  if (args_has (args, 'p'))
+    previous = 1;
 
-	oldlayout = w->old_layout;
-	w->old_layout = layout_dump(w->layout_root);
+  oldlayout = w->old_layout;
+  w->old_layout = layout_dump (w->layout_root);
 
-	if (next || previous) {
-		if (next)
-			layout_set_next(w);
-		else
-			layout_set_previous(w);
-		goto changed;
+  if (next || previous)
+    {
+      if (next)
+	layout_set_next (w);
+      else
+	layout_set_previous (w);
+      goto changed;
+    }
+
+  if (args_has (args, 'E'))
+    {
+      layout_spread_out (wp);
+      goto changed;
+    }
+
+  if (!args_has (args, 'o'))
+    {
+      if (args->argc == 0)
+	layout = w->lastlayout;
+      else
+	layout = layout_set_lookup (args->argv[0]);
+      if (layout != -1)
+	{
+	  layout_set_select (w, layout);
+	  goto changed;
 	}
+    }
 
-	if (args_has(args, 'E')) {
-		layout_spread_out(wp);
-		goto changed;
+  if (args->argc != 0)
+    layoutname = args->argv[0];
+  else if (args_has (args, 'o'))
+    layoutname = oldlayout;
+  else
+    layoutname = NULL;
+
+  if (layoutname != NULL)
+    {
+      if (layout_parse (w, layoutname) == -1)
+	{
+	  cmdq_error (item, "can't set layout: %s", layoutname);
+	  goto error;
 	}
+      goto changed;
+    }
 
-	if (!args_has(args, 'o')) {
-		if (args->argc == 0)
-			layout = w->lastlayout;
-		else
-			layout = layout_set_lookup(args->argv[0]);
-		if (layout != -1) {
-			layout_set_select(w, layout);
-			goto changed;
-		}
-	}
-
-	if (args->argc != 0)
-		layoutname = args->argv[0];
-	else if (args_has(args, 'o'))
-		layoutname = oldlayout;
-	else
-		layoutname = NULL;
-
-	if (layoutname != NULL) {
-		if (layout_parse(w, layoutname) == -1) {
-			cmdq_error(item, "can't set layout: %s", layoutname);
-			goto error;
-		}
-		goto changed;
-	}
-
-	free(oldlayout);
-	return (CMD_RETURN_NORMAL);
+  free (oldlayout);
+  return (CMD_RETURN_NORMAL);
 
 changed:
-	free(oldlayout);
-	recalculate_sizes();
-	server_redraw_window(w);
-	notify_window("window-layout-changed", w);
-	return (CMD_RETURN_NORMAL);
+  free (oldlayout);
+  recalculate_sizes ();
+  server_redraw_window (w);
+  notify_window ("window-layout-changed", w);
+  return (CMD_RETURN_NORMAL);
 
 error:
-	free(w->old_layout);
-	w->old_layout = oldlayout;
-	return (CMD_RETURN_ERROR);
+  free (w->old_layout);
+  w->old_layout = oldlayout;
+  return (CMD_RETURN_ERROR);
 }

@@ -26,37 +26,37 @@
  * Rename a window.
  */
 
-static enum cmd_retval	cmd_rename_window_exec(struct cmd *,
-			    struct cmdq_item *);
+static enum cmd_retval cmd_rename_window_exec (struct cmd *,
+					       struct cmdq_item *);
 
 const struct cmd_entry cmd_rename_window_entry = {
-	.name = "rename-window",
-	.alias = "renamew",
+  .name = "rename-window",
+  .alias = "renamew",
 
-	.args = { "t:", 1, 1 },
-	.usage = CMD_TARGET_WINDOW_USAGE " new-name",
+  .args = {"t:", 1, 1},
+  .usage = CMD_TARGET_WINDOW_USAGE " new-name",
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_rename_window_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_rename_window_exec
 };
 
 static enum cmd_retval
-cmd_rename_window_exec(struct cmd *self, struct cmdq_item *item)
+cmd_rename_window_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct winlink		*wl = target->wl;
-	char			*newname;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct winlink *wl = target->wl;
+  char *newname;
 
-	newname = format_single_from_target(item, args->argv[0]);
-	window_set_name(wl->window, newname);
-	options_set_number(wl->window->options, "automatic-rename", 0);
+  newname = format_single_from_target (item, args->argv[0]);
+  window_set_name (wl->window, newname);
+  options_set_number (wl->window->options, "automatic-rename", 0);
 
-	server_redraw_window_borders(wl->window);
-	server_status_window(wl->window);
-	free(newname);
+  server_redraw_window_borders (wl->window);
+  server_status_window (wl->window);
+  free (newname);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

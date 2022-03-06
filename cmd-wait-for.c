@@ -28,237 +28,252 @@
  * Block or wake a client on a named wait channel.
  */
 
-static enum cmd_retval cmd_wait_for_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_wait_for_exec (struct cmd *, struct cmdq_item *);
 
 const struct cmd_entry cmd_wait_for_entry = {
-	.name = "wait-for",
-	.alias = "wait",
+  .name = "wait-for",
+  .alias = "wait",
 
-	.args = { "LSU", 1, 1 },
-	.usage = "[-L|-S|-U] channel",
+  .args = {"LSU", 1, 1},
+  .usage = "[-L|-S|-U] channel",
 
-	.flags = 0,
-	.exec = cmd_wait_for_exec
+  .flags = 0,
+  .exec = cmd_wait_for_exec
 };
 
-struct wait_item {
-	struct cmdq_item	*item;
-	TAILQ_ENTRY(wait_item)	 entry;
+struct wait_item
+{
+  struct cmdq_item *item;
+    TAILQ_ENTRY (wait_item) entry;
 };
 
-struct wait_channel {
-	const char	       *name;
-	int			locked;
-	int			woken;
+struct wait_channel
+{
+  const char *name;
+  int locked;
+  int woken;
 
-	TAILQ_HEAD(, wait_item)	waiters;
-	TAILQ_HEAD(, wait_item)	lockers;
+    TAILQ_HEAD (, wait_item) waiters;
+    TAILQ_HEAD (, wait_item) lockers;
 
-	RB_ENTRY(wait_channel)	entry;
+    RB_ENTRY (wait_channel) entry;
 };
-RB_HEAD(wait_channels, wait_channel);
-static struct wait_channels wait_channels = RB_INITIALIZER(wait_channels);
+RB_HEAD (wait_channels, wait_channel);
+static struct wait_channels wait_channels = RB_INITIALIZER (wait_channels);
 
-static int wait_channel_cmp(struct wait_channel *, struct wait_channel *);
-RB_GENERATE_STATIC(wait_channels, wait_channel, entry, wait_channel_cmp);
+static int wait_channel_cmp (struct wait_channel *, struct wait_channel *);
+RB_GENERATE_STATIC (wait_channels, wait_channel, entry, wait_channel_cmp);
 
 static int
-wait_channel_cmp(struct wait_channel *wc1, struct wait_channel *wc2)
+wait_channel_cmp (struct wait_channel *wc1, struct wait_channel *wc2)
 {
-	return (strcmp(wc1->name, wc2->name));
+  return (strcmp (wc1->name, wc2->name));
 }
 
-static enum cmd_retval	cmd_wait_for_signal(struct cmdq_item *, const char *,
-			    struct wait_channel *);
-static enum cmd_retval	cmd_wait_for_wait(struct cmdq_item *, const char *,
-			    struct wait_channel *);
-static enum cmd_retval	cmd_wait_for_lock(struct cmdq_item *, const char *,
-			    struct wait_channel *);
-static enum cmd_retval	cmd_wait_for_unlock(struct cmdq_item *, const char *,
-			    struct wait_channel *);
+static enum cmd_retval cmd_wait_for_signal (struct cmdq_item *, const char *,
+					    struct wait_channel *);
+static enum cmd_retval cmd_wait_for_wait (struct cmdq_item *, const char *,
+					  struct wait_channel *);
+static enum cmd_retval cmd_wait_for_lock (struct cmdq_item *, const char *,
+					  struct wait_channel *);
+static enum cmd_retval cmd_wait_for_unlock (struct cmdq_item *, const char *,
+					    struct wait_channel *);
 
-static struct wait_channel	*cmd_wait_for_add(const char *);
-static void			 cmd_wait_for_remove(struct wait_channel *);
+static struct wait_channel *cmd_wait_for_add (const char *);
+static void cmd_wait_for_remove (struct wait_channel *);
 
 static struct wait_channel *
-cmd_wait_for_add(const char *name)
+cmd_wait_for_add (const char *name)
 {
-	struct wait_channel *wc;
+  struct wait_channel *wc;
 
-	wc = xmalloc(sizeof *wc);
-	wc->name = xstrdup(name);
+  wc = xmalloc (sizeof *wc);
+  wc->name = xstrdup (name);
 
-	wc->locked = 0;
-	wc->woken = 0;
+  wc->locked = 0;
+  wc->woken = 0;
 
-	TAILQ_INIT(&wc->waiters);
-	TAILQ_INIT(&wc->lockers);
+  TAILQ_INIT (&wc->waiters);
+  TAILQ_INIT (&wc->lockers);
 
-	RB_INSERT(wait_channels, &wait_channels, wc);
+  RB_INSERT (wait_channels, &wait_channels, wc);
 
-	log_debug("add wait channel %s", wc->name);
+  log_debug ("add wait channel %s", wc->name);
 
-	return (wc);
+  return (wc);
 }
 
 static void
-cmd_wait_for_remove(struct wait_channel *wc)
+cmd_wait_for_remove (struct wait_channel *wc)
 {
-	if (wc->locked)
-		return;
-	if (!TAILQ_EMPTY(&wc->waiters) || !wc->woken)
-		return;
+  if (wc->locked)
+    return;
+  if (!TAILQ_EMPTY (&wc->waiters) || !wc->woken)
+    return;
 
-	log_debug("remove wait channel %s", wc->name);
+  log_debug ("remove wait channel %s", wc->name);
 
-	RB_REMOVE(wait_channels, &wait_channels, wc);
+  RB_REMOVE (wait_channels, &wait_channels, wc);
 
-	free((void *)wc->name);
-	free(wc);
+  free ((void *) wc->name);
+  free (wc);
 }
 
 static enum cmd_retval
-cmd_wait_for_exec(struct cmd *self, struct cmdq_item *item)
+cmd_wait_for_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args     	*args = cmd_get_args(self);
-	const char		*name = args->argv[0];
-	struct wait_channel	*wc, wc0;
+  struct args *args = cmd_get_args (self);
+  const char *name = args->argv[0];
+  struct wait_channel *wc, wc0;
 
-	wc0.name = name;
-	wc = RB_FIND(wait_channels, &wait_channels, &wc0);
+  wc0.name = name;
+  wc = RB_FIND (wait_channels, &wait_channels, &wc0);
 
-	if (args_has(args, 'S'))
-		return (cmd_wait_for_signal(item, name, wc));
-	if (args_has(args, 'L'))
-		return (cmd_wait_for_lock(item, name, wc));
-	if (args_has(args, 'U'))
-		return (cmd_wait_for_unlock(item, name, wc));
-	return (cmd_wait_for_wait(item, name, wc));
+  if (args_has (args, 'S'))
+    return (cmd_wait_for_signal (item, name, wc));
+  if (args_has (args, 'L'))
+    return (cmd_wait_for_lock (item, name, wc));
+  if (args_has (args, 'U'))
+    return (cmd_wait_for_unlock (item, name, wc));
+  return (cmd_wait_for_wait (item, name, wc));
 }
 
 static enum cmd_retval
-cmd_wait_for_signal(__unused struct cmdq_item *item, const char *name,
-    struct wait_channel *wc)
+cmd_wait_for_signal (__unused struct cmdq_item *item, const char *name,
+		     struct wait_channel *wc)
 {
-	struct wait_item	*wi, *wi1;
+  struct wait_item *wi, *wi1;
 
-	if (wc == NULL)
-		wc = cmd_wait_for_add(name);
+  if (wc == NULL)
+    wc = cmd_wait_for_add (name);
 
-	if (TAILQ_EMPTY(&wc->waiters) && !wc->woken) {
-		log_debug("signal wait channel %s, no waiters", wc->name);
-		wc->woken = 1;
-		return (CMD_RETURN_NORMAL);
-	}
-	log_debug("signal wait channel %s, with waiters", wc->name);
+  if (TAILQ_EMPTY (&wc->waiters) && !wc->woken)
+    {
+      log_debug ("signal wait channel %s, no waiters", wc->name);
+      wc->woken = 1;
+      return (CMD_RETURN_NORMAL);
+    }
+  log_debug ("signal wait channel %s, with waiters", wc->name);
 
-	TAILQ_FOREACH_SAFE(wi, &wc->waiters, entry, wi1) {
-		cmdq_continue(wi->item);
+  TAILQ_FOREACH_SAFE (wi, &wc->waiters, entry, wi1)
+  {
+    cmdq_continue (wi->item);
 
-		TAILQ_REMOVE(&wc->waiters, wi, entry);
-		free(wi);
-	}
+    TAILQ_REMOVE (&wc->waiters, wi, entry);
+    free (wi);
+  }
 
-	cmd_wait_for_remove(wc);
-	return (CMD_RETURN_NORMAL);
+  cmd_wait_for_remove (wc);
+  return (CMD_RETURN_NORMAL);
 }
 
 static enum cmd_retval
-cmd_wait_for_wait(struct cmdq_item *item, const char *name,
-    struct wait_channel *wc)
+cmd_wait_for_wait (struct cmdq_item *item, const char *name,
+		   struct wait_channel *wc)
 {
-	struct client		*c = cmdq_get_client(item);
-	struct wait_item	*wi;
+  struct client *c = cmdq_get_client (item);
+  struct wait_item *wi;
 
-	if (c == NULL) {
-		cmdq_error(item, "not able to wait");
-		return (CMD_RETURN_ERROR);
-	}
+  if (c == NULL)
+    {
+      cmdq_error (item, "not able to wait");
+      return (CMD_RETURN_ERROR);
+    }
 
-	if (wc == NULL)
-		wc = cmd_wait_for_add(name);
+  if (wc == NULL)
+    wc = cmd_wait_for_add (name);
 
-	if (wc->woken) {
-		log_debug("wait channel %s already woken (%p)", wc->name, c);
-		cmd_wait_for_remove(wc);
-		return (CMD_RETURN_NORMAL);
-	}
-	log_debug("wait channel %s not woken (%p)", wc->name, c);
+  if (wc->woken)
+    {
+      log_debug ("wait channel %s already woken (%p)", wc->name, c);
+      cmd_wait_for_remove (wc);
+      return (CMD_RETURN_NORMAL);
+    }
+  log_debug ("wait channel %s not woken (%p)", wc->name, c);
 
-	wi = xcalloc(1, sizeof *wi);
-	wi->item = item;
-	TAILQ_INSERT_TAIL(&wc->waiters, wi, entry);
+  wi = xcalloc (1, sizeof *wi);
+  wi->item = item;
+  TAILQ_INSERT_TAIL (&wc->waiters, wi, entry);
 
-	return (CMD_RETURN_WAIT);
+  return (CMD_RETURN_WAIT);
 }
 
 static enum cmd_retval
-cmd_wait_for_lock(struct cmdq_item *item, const char *name,
-    struct wait_channel *wc)
+cmd_wait_for_lock (struct cmdq_item *item, const char *name,
+		   struct wait_channel *wc)
 {
-	struct wait_item	*wi;
+  struct wait_item *wi;
 
-	if (cmdq_get_client(item) == NULL) {
-		cmdq_error(item, "not able to lock");
-		return (CMD_RETURN_ERROR);
-	}
+  if (cmdq_get_client (item) == NULL)
+    {
+      cmdq_error (item, "not able to lock");
+      return (CMD_RETURN_ERROR);
+    }
 
-	if (wc == NULL)
-		wc = cmd_wait_for_add(name);
+  if (wc == NULL)
+    wc = cmd_wait_for_add (name);
 
-	if (wc->locked) {
-		wi = xcalloc(1, sizeof *wi);
-		wi->item = item;
-		TAILQ_INSERT_TAIL(&wc->lockers, wi, entry);
-		return (CMD_RETURN_WAIT);
-	}
-	wc->locked = 1;
+  if (wc->locked)
+    {
+      wi = xcalloc (1, sizeof *wi);
+      wi->item = item;
+      TAILQ_INSERT_TAIL (&wc->lockers, wi, entry);
+      return (CMD_RETURN_WAIT);
+    }
+  wc->locked = 1;
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }
 
 static enum cmd_retval
-cmd_wait_for_unlock(struct cmdq_item *item, const char *name,
-    struct wait_channel *wc)
+cmd_wait_for_unlock (struct cmdq_item *item, const char *name,
+		     struct wait_channel *wc)
 {
-	struct wait_item	*wi;
+  struct wait_item *wi;
 
-	if (wc == NULL || !wc->locked) {
-		cmdq_error(item, "channel %s not locked", name);
-		return (CMD_RETURN_ERROR);
-	}
+  if (wc == NULL || !wc->locked)
+    {
+      cmdq_error (item, "channel %s not locked", name);
+      return (CMD_RETURN_ERROR);
+    }
 
-	if ((wi = TAILQ_FIRST(&wc->lockers)) != NULL) {
-		cmdq_continue(wi->item);
-		TAILQ_REMOVE(&wc->lockers, wi, entry);
-		free(wi);
-	} else {
-		wc->locked = 0;
-		cmd_wait_for_remove(wc);
-	}
+  if ((wi = TAILQ_FIRST (&wc->lockers)) != NULL)
+    {
+      cmdq_continue (wi->item);
+      TAILQ_REMOVE (&wc->lockers, wi, entry);
+      free (wi);
+    }
+  else
+    {
+      wc->locked = 0;
+      cmd_wait_for_remove (wc);
+    }
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }
 
 void
-cmd_wait_for_flush(void)
+cmd_wait_for_flush (void)
 {
-	struct wait_channel	*wc, *wc1;
-	struct wait_item	*wi, *wi1;
+  struct wait_channel *wc, *wc1;
+  struct wait_item *wi, *wi1;
 
-	RB_FOREACH_SAFE(wc, wait_channels, &wait_channels, wc1) {
-		TAILQ_FOREACH_SAFE(wi, &wc->waiters, entry, wi1) {
-			cmdq_continue(wi->item);
-			TAILQ_REMOVE(&wc->waiters, wi, entry);
-			free(wi);
-		}
-		wc->woken = 1;
-		TAILQ_FOREACH_SAFE(wi, &wc->lockers, entry, wi1) {
-			cmdq_continue(wi->item);
-			TAILQ_REMOVE(&wc->lockers, wi, entry);
-			free(wi);
-		}
-		wc->locked = 0;
-		cmd_wait_for_remove(wc);
-	}
+  RB_FOREACH_SAFE (wc, wait_channels, &wait_channels, wc1)
+  {
+    TAILQ_FOREACH_SAFE (wi, &wc->waiters, entry, wi1)
+    {
+      cmdq_continue (wi->item);
+      TAILQ_REMOVE (&wc->waiters, wi, entry);
+      free (wi);
+    }
+    wc->woken = 1;
+    TAILQ_FOREACH_SAFE (wi, &wc->lockers, entry, wi1)
+    {
+      cmdq_continue (wi->item);
+      TAILQ_REMOVE (&wc->lockers, wi, entry);
+      free (wi);
+    }
+    wc->locked = 0;
+    cmd_wait_for_remove (wc);
+  }
 }

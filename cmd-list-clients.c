@@ -33,58 +33,60 @@
 	"[#{client_width}x#{client_height} #{client_termname}] "	\
 	"#{?client_flags,(,}#{client_flags}#{?client_flags,),}"
 
-static enum cmd_retval	cmd_list_clients_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_list_clients_exec (struct cmd *,
+					      struct cmdq_item *);
 
 const struct cmd_entry cmd_list_clients_entry = {
-	.name = "list-clients",
-	.alias = "lsc",
+  .name = "list-clients",
+  .alias = "lsc",
 
-	.args = { "F:t:", 0, 0 },
-	.usage = "[-F format] " CMD_TARGET_SESSION_USAGE,
+  .args = {"F:t:", 0, 0},
+  .usage = "[-F format] " CMD_TARGET_SESSION_USAGE,
 
-	.target = { 't', CMD_FIND_SESSION, 0 },
+  .target = {'t', CMD_FIND_SESSION, 0},
 
-	.flags = CMD_READONLY|CMD_AFTERHOOK,
-	.exec = cmd_list_clients_exec
+  .flags = CMD_READONLY | CMD_AFTERHOOK,
+  .exec = cmd_list_clients_exec
 };
 
 static enum cmd_retval
-cmd_list_clients_exec(struct cmd *self, struct cmdq_item *item)
+cmd_list_clients_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args 		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct client		*c;
-	struct session		*s;
-	struct format_tree	*ft;
-	const char		*template;
-	u_int			 idx;
-	char			*line;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct client *c;
+  struct session *s;
+  struct format_tree *ft;
+  const char *template;
+  u_int idx;
+  char *line;
 
-	if (args_has(args, 't'))
-		s = target->s;
-	else
-		s = NULL;
+  if (args_has (args, 't'))
+    s = target->s;
+  else
+    s = NULL;
 
-	if ((template = args_get(args, 'F')) == NULL)
-		template = LIST_CLIENTS_TEMPLATE;
+  if ((template = args_get (args, 'F')) == NULL)
+    template = LIST_CLIENTS_TEMPLATE;
 
-	idx = 0;
-	TAILQ_FOREACH(c, &clients, entry) {
-		if (c->session == NULL || (s != NULL && s != c->session))
-			continue;
+  idx = 0;
+  TAILQ_FOREACH (c, &clients, entry)
+  {
+    if (c->session == NULL || (s != NULL && s != c->session))
+      continue;
 
-		ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
-		format_add(ft, "line", "%u", idx);
-		format_defaults(ft, c, NULL, NULL, NULL);
+    ft = format_create (cmdq_get_client (item), item, FORMAT_NONE, 0);
+    format_add (ft, "line", "%u", idx);
+    format_defaults (ft, c, NULL, NULL, NULL);
 
-		line = format_expand(ft, template);
-		cmdq_print(item, "%s", line);
-		free(line);
+    line = format_expand (ft, template);
+    cmdq_print (item, "%s", line);
+    free (line);
 
-		format_free(ft);
+    format_free (ft);
 
-		idx++;
-	}
+    idx++;
+  }
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

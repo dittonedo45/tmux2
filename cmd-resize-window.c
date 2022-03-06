@@ -26,89 +26,100 @@
  * Increase or decrease window size.
  */
 
-static enum cmd_retval	cmd_resize_window_exec(struct cmd *,
-			    struct cmdq_item *);
+static enum cmd_retval cmd_resize_window_exec (struct cmd *,
+					       struct cmdq_item *);
 
 const struct cmd_entry cmd_resize_window_entry = {
-	.name = "resize-window",
-	.alias = "resizew",
+  .name = "resize-window",
+  .alias = "resizew",
 
-	.args = { "aADLRt:Ux:y:", 0, 1 },
-	.usage = "[-aADLRU] [-x width] [-y height] " CMD_TARGET_WINDOW_USAGE " "
-		 "[adjustment]",
+  .args = {"aADLRt:Ux:y:", 0, 1},
+  .usage = "[-aADLRU] [-x width] [-y height] " CMD_TARGET_WINDOW_USAGE " "
+    "[adjustment]",
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_resize_window_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_resize_window_exec
 };
 
 static enum cmd_retval
-cmd_resize_window_exec(struct cmd *self, struct cmdq_item *item)
+cmd_resize_window_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct winlink		*wl = target->wl;
-	struct window		*w = wl->window;
-	struct session		*s = target->s;
-	const char	       	*errstr;
-	char			*cause;
-	u_int			 adjust, sx, sy;
-	int			 xpixel = -1, ypixel = -1;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct winlink *wl = target->wl;
+  struct window *w = wl->window;
+  struct session *s = target->s;
+  const char *errstr;
+  char *cause;
+  u_int adjust, sx, sy;
+  int xpixel = -1, ypixel = -1;
 
-	if (args->argc == 0)
-		adjust = 1;
-	else {
-		adjust = strtonum(args->argv[0], 1, INT_MAX, &errstr);
-		if (errstr != NULL) {
-			cmdq_error(item, "adjustment %s", errstr);
-			return (CMD_RETURN_ERROR);
-		}
+  if (args->argc == 0)
+    adjust = 1;
+  else
+    {
+      adjust = strtonum (args->argv[0], 1, INT_MAX, &errstr);
+      if (errstr != NULL)
+	{
+	  cmdq_error (item, "adjustment %s", errstr);
+	  return (CMD_RETURN_ERROR);
 	}
+    }
 
-	sx = w->sx;
-	sy = w->sy;
+  sx = w->sx;
+  sy = w->sy;
 
-	if (args_has(args, 'x')) {
-		sx = args_strtonum(args, 'x', WINDOW_MINIMUM, WINDOW_MAXIMUM,
-		    &cause);
-		if (cause != NULL) {
-			cmdq_error(item, "width %s", cause);
-			free(cause);
-			return (CMD_RETURN_ERROR);
-		}
+  if (args_has (args, 'x'))
+    {
+      sx = args_strtonum (args, 'x', WINDOW_MINIMUM, WINDOW_MAXIMUM, &cause);
+      if (cause != NULL)
+	{
+	  cmdq_error (item, "width %s", cause);
+	  free (cause);
+	  return (CMD_RETURN_ERROR);
 	}
-	if (args_has(args, 'y')) {
-		sy = args_strtonum(args, 'y', WINDOW_MINIMUM, WINDOW_MAXIMUM,
-		    &cause);
-		if (cause != NULL) {
-			cmdq_error(item, "height %s", cause);
-			free(cause);
-			return (CMD_RETURN_ERROR);
-		}
+    }
+  if (args_has (args, 'y'))
+    {
+      sy = args_strtonum (args, 'y', WINDOW_MINIMUM, WINDOW_MAXIMUM, &cause);
+      if (cause != NULL)
+	{
+	  cmdq_error (item, "height %s", cause);
+	  free (cause);
+	  return (CMD_RETURN_ERROR);
 	}
+    }
 
-	if (args_has(args, 'L')) {
-		if (sx >= adjust)
-			sx -= adjust;
-	} else if (args_has(args, 'R'))
-		sx += adjust;
-	else if (args_has(args, 'U')) {
-		if (sy >= adjust)
-			sy -= adjust;
-	} else if (args_has(args, 'D'))
-		sy += adjust;
+  if (args_has (args, 'L'))
+    {
+      if (sx >= adjust)
+	sx -= adjust;
+    }
+  else if (args_has (args, 'R'))
+    sx += adjust;
+  else if (args_has (args, 'U'))
+    {
+      if (sy >= adjust)
+	sy -= adjust;
+    }
+  else if (args_has (args, 'D'))
+    sy += adjust;
 
-	if (args_has(args, 'A')) {
-		default_window_size(NULL, s, w, &sx, &sy, &xpixel, &ypixel,
-		    WINDOW_SIZE_LARGEST);
-	} else if (args_has(args, 'a')) {
-		default_window_size(NULL, s, w, &sx, &sy, &xpixel, &ypixel,
-		    WINDOW_SIZE_SMALLEST);
-	}
+  if (args_has (args, 'A'))
+    {
+      default_window_size (NULL, s, w, &sx, &sy, &xpixel, &ypixel,
+			   WINDOW_SIZE_LARGEST);
+    }
+  else if (args_has (args, 'a'))
+    {
+      default_window_size (NULL, s, w, &sx, &sy, &xpixel, &ypixel,
+			   WINDOW_SIZE_SMALLEST);
+    }
 
-	options_set_number(w->options, "window-size", WINDOW_SIZE_MANUAL);
-	resize_window(w, sx, sy, xpixel, ypixel);
+  options_set_number (w->options, "window-size", WINDOW_SIZE_MANUAL);
+  resize_window (w, sx, sy, xpixel, ypixel);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

@@ -27,45 +27,54 @@
  * Note this deliberately has no alias to make it hard to hit by accident.
  */
 
-static enum cmd_retval	cmd_kill_session_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_kill_session_exec (struct cmd *,
+					      struct cmdq_item *);
 
 const struct cmd_entry cmd_kill_session_entry = {
-	.name = "kill-session",
-	.alias = NULL,
+  .name = "kill-session",
+  .alias = NULL,
 
-	.args = { "aCt:", 0, 0 },
-	.usage = "[-aC] " CMD_TARGET_SESSION_USAGE,
+  .args = {"aCt:", 0, 0},
+  .usage = "[-aC] " CMD_TARGET_SESSION_USAGE,
 
-	.target = { 't', CMD_FIND_SESSION, 0 },
+  .target = {'t', CMD_FIND_SESSION, 0},
 
-	.flags = 0,
-	.exec = cmd_kill_session_exec
+  .flags = 0,
+  .exec = cmd_kill_session_exec
 };
 
 static enum cmd_retval
-cmd_kill_session_exec(struct cmd *self, struct cmdq_item *item)
+cmd_kill_session_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct session		*s = target->s, *sloop, *stmp;
-	struct winlink		*wl;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct session *s = target->s, *sloop, *stmp;
+  struct winlink *wl;
 
-	if (args_has(args, 'C')) {
-		RB_FOREACH(wl, winlinks, &s->windows) {
-			wl->window->flags &= ~WINDOW_ALERTFLAGS;
-			wl->flags &= ~WINLINK_ALERTFLAGS;
-		}
-		server_redraw_session(s);
-	} else if (args_has(args, 'a')) {
-		RB_FOREACH_SAFE(sloop, sessions, &sessions, stmp) {
-			if (sloop != s) {
-				server_destroy_session(sloop);
-				session_destroy(sloop, 1, __func__);
-			}
-		}
-	} else {
-		server_destroy_session(s);
-		session_destroy(s, 1, __func__);
-	}
-	return (CMD_RETURN_NORMAL);
+  if (args_has (args, 'C'))
+    {
+      RB_FOREACH (wl, winlinks, &s->windows)
+      {
+	wl->window->flags &= ~WINDOW_ALERTFLAGS;
+	wl->flags &= ~WINLINK_ALERTFLAGS;
+      }
+      server_redraw_session (s);
+    }
+  else if (args_has (args, 'a'))
+    {
+      RB_FOREACH_SAFE (sloop, sessions, &sessions, stmp)
+      {
+	if (sloop != s)
+	  {
+	    server_destroy_session (sloop);
+	    session_destroy (sloop, 1, __func__);
+	  }
+      }
+    }
+  else
+    {
+      server_destroy_session (s);
+      session_destroy (s, 1, __func__);
+    }
+  return (CMD_RETURN_NORMAL);
 }

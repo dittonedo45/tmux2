@@ -26,123 +26,129 @@
  * List panes on given window.
  */
 
-static enum cmd_retval	cmd_list_panes_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_list_panes_exec (struct cmd *, struct cmdq_item *);
 
-static void	cmd_list_panes_server(struct cmd *, struct cmdq_item *);
-static void	cmd_list_panes_session(struct cmd *, struct session *,
-		    struct cmdq_item *, int);
-static void	cmd_list_panes_window(struct cmd *, struct session *,
-		    struct winlink *, struct cmdq_item *, int);
+static void cmd_list_panes_server (struct cmd *, struct cmdq_item *);
+static void cmd_list_panes_session (struct cmd *, struct session *,
+				    struct cmdq_item *, int);
+static void cmd_list_panes_window (struct cmd *, struct session *,
+				   struct winlink *, struct cmdq_item *, int);
 
 const struct cmd_entry cmd_list_panes_entry = {
-	.name = "list-panes",
-	.alias = "lsp",
+  .name = "list-panes",
+  .alias = "lsp",
 
-	.args = { "asF:f:t:", 0, 0 },
-	.usage = "[-as] [-F format] [-f filter] " CMD_TARGET_WINDOW_USAGE,
+  .args = {"asF:f:t:", 0, 0},
+  .usage = "[-as] [-F format] [-f filter] " CMD_TARGET_WINDOW_USAGE,
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_list_panes_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_list_panes_exec
 };
 
 static enum cmd_retval
-cmd_list_panes_exec(struct cmd *self, struct cmdq_item *item)
+cmd_list_panes_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct session		*s = target->s;
-	struct winlink		*wl = target->wl;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct session *s = target->s;
+  struct winlink *wl = target->wl;
 
-	if (args_has(args, 'a'))
-		cmd_list_panes_server(self, item);
-	else if (args_has(args, 's'))
-		cmd_list_panes_session(self, s, item, 1);
-	else
-		cmd_list_panes_window(self, s, wl, item, 0);
+  if (args_has (args, 'a'))
+    cmd_list_panes_server (self, item);
+  else if (args_has (args, 's'))
+    cmd_list_panes_session (self, s, item, 1);
+  else
+    cmd_list_panes_window (self, s, wl, item, 0);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }
 
 static void
-cmd_list_panes_server(struct cmd *self, struct cmdq_item *item)
+cmd_list_panes_server (struct cmd *self, struct cmdq_item *item)
 {
-	struct session	*s;
+  struct session *s;
 
-	RB_FOREACH(s, sessions, &sessions)
-		cmd_list_panes_session(self, s, item, 2);
+  RB_FOREACH (s, sessions, &sessions)
+    cmd_list_panes_session (self, s, item, 2);
 }
 
 static void
-cmd_list_panes_session(struct cmd *self, struct session *s,
-    struct cmdq_item *item, int type)
+cmd_list_panes_session (struct cmd *self, struct session *s,
+			struct cmdq_item *item, int type)
 {
-	struct winlink	*wl;
+  struct winlink *wl;
 
-	RB_FOREACH(wl, winlinks, &s->windows)
-		cmd_list_panes_window(self, s, wl, item, type);
+  RB_FOREACH (wl, winlinks, &s->windows)
+    cmd_list_panes_window (self, s, wl, item, type);
 }
 
 static void
-cmd_list_panes_window(struct cmd *self, struct session *s, struct winlink *wl,
-    struct cmdq_item *item, int type)
+cmd_list_panes_window (struct cmd *self, struct session *s,
+		       struct winlink *wl, struct cmdq_item *item, int type)
 {
-	struct args		*args = cmd_get_args(self);
-	struct window_pane	*wp;
-	u_int			 n;
-	struct format_tree	*ft;
-	const char		*template, *filter;
-	char			*line, *expanded;
-	int			 flag;
+  struct args *args = cmd_get_args (self);
+  struct window_pane *wp;
+  u_int n;
+  struct format_tree *ft;
+  const char *template, *filter;
+  char *line, *expanded;
+  int flag;
 
-	template = args_get(args, 'F');
-	if (template == NULL) {
-		switch (type) {
-		case 0:
-			template = "#{pane_index}: "
-			    "[#{pane_width}x#{pane_height}] [history "
-			    "#{history_size}/#{history_limit}, "
-			    "#{history_bytes} bytes] #{pane_id}"
-			    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
-			break;
-		case 1:
-			template = "#{window_index}.#{pane_index}: "
-			    "[#{pane_width}x#{pane_height}] [history "
-			    "#{history_size}/#{history_limit}, "
-			    "#{history_bytes} bytes] #{pane_id}"
-			    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
-			break;
-		case 2:
-			template = "#{session_name}:#{window_index}."
-			    "#{pane_index}: [#{pane_width}x#{pane_height}] "
-			    "[history #{history_size}/#{history_limit}, "
-			    "#{history_bytes} bytes] #{pane_id}"
-			    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
-			break;
-		}
+  template = args_get (args, 'F');
+  if (template == NULL)
+    {
+      switch (type)
+	{
+	case 0:
+	  template = "#{pane_index}: "
+	    "[#{pane_width}x#{pane_height}] [history "
+	    "#{history_size}/#{history_limit}, "
+	    "#{history_bytes} bytes] #{pane_id}"
+	    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
+	  break;
+	case 1:
+	  template = "#{window_index}.#{pane_index}: "
+	    "[#{pane_width}x#{pane_height}] [history "
+	    "#{history_size}/#{history_limit}, "
+	    "#{history_bytes} bytes] #{pane_id}"
+	    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
+	  break;
+	case 2:
+	  template = "#{session_name}:#{window_index}."
+	    "#{pane_index}: [#{pane_width}x#{pane_height}] "
+	    "[history #{history_size}/#{history_limit}, "
+	    "#{history_bytes} bytes] #{pane_id}"
+	    "#{?pane_active, (active),}#{?pane_dead, (dead),}";
+	  break;
 	}
-	filter = args_get(args, 'f');
+    }
+  filter = args_get (args, 'f');
 
-	n = 0;
-	TAILQ_FOREACH(wp, &wl->window->panes, entry) {
-		ft = format_create(cmdq_get_client(item), item, FORMAT_NONE, 0);
-		format_add(ft, "line", "%u", n);
-		format_defaults(ft, NULL, s, wl, wp);
+  n = 0;
+  TAILQ_FOREACH (wp, &wl->window->panes, entry)
+  {
+    ft = format_create (cmdq_get_client (item), item, FORMAT_NONE, 0);
+    format_add (ft, "line", "%u", n);
+    format_defaults (ft, NULL, s, wl, wp);
 
-		if (filter != NULL) {
-			expanded = format_expand(ft, filter);
-			flag = format_true(expanded);
-			free(expanded);
-		} else
-			flag = 1;
-		if (flag) {
-			line = format_expand(ft, template);
-			cmdq_print(item, "%s", line);
-			free(line);
-		}
+    if (filter != NULL)
+      {
+	expanded = format_expand (ft, filter);
+	flag = format_true (expanded);
+	free (expanded);
+      }
+    else
+      flag = 1;
+    if (flag)
+      {
+	line = format_expand (ft, template);
+	cmdq_print (item, "%s", line);
+	free (line);
+      }
 
-		format_free(ft);
-		n++;
-	}
+    format_free (ft);
+    n++;
+  }
 }

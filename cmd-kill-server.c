@@ -27,35 +27,36 @@
  * Kill the server and do nothing else.
  */
 
-static enum cmd_retval	cmd_kill_server_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_kill_server_exec (struct cmd *,
+					     struct cmdq_item *);
 
 const struct cmd_entry cmd_kill_server_entry = {
-	.name = "kill-server",
-	.alias = NULL,
+  .name = "kill-server",
+  .alias = NULL,
 
-	.args = { "", 0, 0 },
-	.usage = "",
+  .args = {"", 0, 0},
+  .usage = "",
 
-	.flags = 0,
-	.exec = cmd_kill_server_exec
+  .flags = 0,
+  .exec = cmd_kill_server_exec
 };
 
 const struct cmd_entry cmd_start_server_entry = {
-	.name = "start-server",
-	.alias = "start",
+  .name = "start-server",
+  .alias = "start",
 
-	.args = { "", 0, 0 },
-	.usage = "",
+  .args = {"", 0, 0},
+  .usage = "",
 
-	.flags = CMD_STARTSERVER,
-	.exec = cmd_kill_server_exec
+  .flags = CMD_STARTSERVER,
+  .exec = cmd_kill_server_exec
 };
 
 static enum cmd_retval
-cmd_kill_server_exec(struct cmd *self, __unused struct cmdq_item *item)
+cmd_kill_server_exec (struct cmd *self, __unused struct cmdq_item *item)
 {
-	if (cmd_get_entry(self) == &cmd_kill_server_entry)
-		kill(getpid(), SIGTERM);
+  if (cmd_get_entry (self) == &cmd_kill_server_entry)
+    kill (getpid (), SIGTERM);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

@@ -24,138 +24,137 @@
 #include "tmux.h"
 
 void *
-xmalloc(size_t size)
+xmalloc (size_t size)
 {
-	void *ptr;
+  void *ptr;
 
-	if (size == 0)
-		fatalx("xmalloc: zero size");
-	ptr = malloc(size);
-	if (ptr == NULL)
-		fatalx("xmalloc: allocating %zu bytes: %s",
-		    size, strerror(errno));
-	return ptr;
+  if (size == 0)
+    fatalx ("xmalloc: zero size");
+  ptr = malloc (size);
+  if (ptr == NULL)
+    fatalx ("xmalloc: allocating %zu bytes: %s", size, strerror (errno));
+  return ptr;
 }
 
 void *
-xcalloc(size_t nmemb, size_t size)
+xcalloc (size_t nmemb, size_t size)
 {
-	void *ptr;
+  void *ptr;
 
-	if (size == 0 || nmemb == 0)
-		fatalx("xcalloc: zero size");
-	ptr = calloc(nmemb, size);
-	if (ptr == NULL)
-		fatalx("xcalloc: allocating %zu * %zu bytes: %s",
-		    nmemb, size, strerror(errno));
-	return ptr;
+  if (size == 0 || nmemb == 0)
+    fatalx ("xcalloc: zero size");
+  ptr = calloc (nmemb, size);
+  if (ptr == NULL)
+    fatalx ("xcalloc: allocating %zu * %zu bytes: %s",
+	    nmemb, size, strerror (errno));
+  return ptr;
 }
 
 void *
-xrealloc(void *ptr, size_t size)
+xrealloc (void *ptr, size_t size)
 {
-	return xreallocarray(ptr, 1, size);
+  return xreallocarray (ptr, 1, size);
 }
 
 void *
-xreallocarray(void *ptr, size_t nmemb, size_t size)
+xreallocarray (void *ptr, size_t nmemb, size_t size)
 {
-	void *new_ptr;
+  void *new_ptr;
 
-	if (nmemb == 0 || size == 0)
-		fatalx("xreallocarray: zero size");
-	new_ptr = reallocarray(ptr, nmemb, size);
-	if (new_ptr == NULL)
-		fatalx("xreallocarray: allocating %zu * %zu bytes: %s",
-		    nmemb, size, strerror(errno));
-	return new_ptr;
+  if (nmemb == 0 || size == 0)
+    fatalx ("xreallocarray: zero size");
+  new_ptr = reallocarray (ptr, nmemb, size);
+  if (new_ptr == NULL)
+    fatalx ("xreallocarray: allocating %zu * %zu bytes: %s",
+	    nmemb, size, strerror (errno));
+  return new_ptr;
 }
 
 void *
-xrecallocarray(void *ptr, size_t oldnmemb, size_t nmemb, size_t size)
+xrecallocarray (void *ptr, size_t oldnmemb, size_t nmemb, size_t size)
 {
-	void *new_ptr;
+  void *new_ptr;
 
-	if (nmemb == 0 || size == 0)
-		fatalx("xrecallocarray: zero size");
-	new_ptr = recallocarray(ptr, oldnmemb, nmemb, size);
-	if (new_ptr == NULL)
-		fatalx("xrecallocarray: allocating %zu * %zu bytes: %s",
-		    nmemb, size, strerror(errno));
-	return new_ptr;
+  if (nmemb == 0 || size == 0)
+    fatalx ("xrecallocarray: zero size");
+  new_ptr = recallocarray (ptr, oldnmemb, nmemb, size);
+  if (new_ptr == NULL)
+    fatalx ("xrecallocarray: allocating %zu * %zu bytes: %s",
+	    nmemb, size, strerror (errno));
+  return new_ptr;
 }
 
 char *
-xstrdup(const char *str)
+xstrdup (const char *str)
 {
-	char *cp;
+  char *cp;
 
-	if ((cp = strdup(str)) == NULL)
-		fatalx("xstrdup: %s", strerror(errno));
-	return cp;
+  if ((cp = strdup (str)) == NULL)
+    fatalx ("xstrdup: %s", strerror (errno));
+  return cp;
 }
 
 char *
-xstrndup(const char *str, size_t maxlen)
+xstrndup (const char *str, size_t maxlen)
 {
-	char *cp;
+  char *cp;
 
-	if ((cp = strndup(str, maxlen)) == NULL)
-		fatalx("xstrndup: %s", strerror(errno));
-	return cp;
+  if ((cp = strndup (str, maxlen)) == NULL)
+    fatalx ("xstrndup: %s", strerror (errno));
+  return cp;
 }
 
 int
-xasprintf(char **ret, const char *fmt, ...)
+xasprintf (char **ret, const char *fmt, ...)
 {
-	va_list ap;
-	int i;
+  va_list ap;
+  int i;
 
-	va_start(ap, fmt);
-	i = xvasprintf(ret, fmt, ap);
-	va_end(ap);
+  va_start (ap, fmt);
+  i = xvasprintf (ret, fmt, ap);
+  va_end (ap);
 
-	return i;
+  return i;
 }
 
 int
-xvasprintf(char **ret, const char *fmt, va_list ap)
+xvasprintf (char **ret, const char *fmt, va_list ap)
 {
-	int i;
+  int i;
 
-	i = vasprintf(ret, fmt, ap);
+  i = vasprintf (ret, fmt, ap);
 
-	if (i == -1)
-		fatalx("xasprintf: %s", strerror(errno));
+  if (i == -1)
+    fatalx ("xasprintf: %s", strerror (errno));
 
-	return i;
+  return i;
 }
 
 int
-xsnprintf(char *str, size_t len, const char *fmt, ...)
+xsnprintf (char *str, size_t len, const char *fmt, ...)
 {
-	va_list ap;
-	int i;
+  va_list ap;
+  int i;
 
-	va_start(ap, fmt);
-	i = xvsnprintf(str, len, fmt, ap);
-	va_end(ap);
+  va_start (ap, fmt);
+  i = xvsnprintf (str, len, fmt, ap);
+  va_end (ap);
 
-	return i;
+  return i;
 }
 
 int
-xvsnprintf(char *str, size_t len, const char *fmt, va_list ap)
+xvsnprintf (char *str, size_t len, const char *fmt, va_list ap)
 {
-	int i;
+  int i;
 
-	if (len > INT_MAX)
-		fatalx("xsnprintf: len > INT_MAX");
+  if (len > INT_MAX)
+    fatalx ("xsnprintf: len > INT_MAX");
 
-	i = vsnprintf(str, len, fmt, ap);
+  i = vsnprintf (str, len, fmt, ap);
 
-	if (i < 0 || i >= (int)len)
-		fatalx("xsnprintf: overflow");
+  if (i < 0 || i >= (int) len)
+    fatalx ("xsnprintf: overflow");
 
-	return i;
+  return i;
 }

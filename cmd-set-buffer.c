@@ -27,101 +27,109 @@
  * Add, set, append to or delete a paste buffer.
  */
 
-static enum cmd_retval	cmd_set_buffer_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_set_buffer_exec (struct cmd *, struct cmdq_item *);
 
 const struct cmd_entry cmd_set_buffer_entry = {
-	.name = "set-buffer",
-	.alias = "setb",
+  .name = "set-buffer",
+  .alias = "setb",
 
-	.args = { "ab:t:n:w", 0, 1 },
-	.usage = "[-aw] " CMD_BUFFER_USAGE " [-n new-buffer-name] "
-	         CMD_TARGET_CLIENT_USAGE " data",
+  .args = {"ab:t:n:w", 0, 1},
+  .usage = "[-aw] " CMD_BUFFER_USAGE " [-n new-buffer-name] "
+    CMD_TARGET_CLIENT_USAGE " data",
 
-	.flags = CMD_AFTERHOOK|CMD_CLIENT_TFLAG|CMD_CLIENT_CANFAIL,
-	.exec = cmd_set_buffer_exec
+  .flags = CMD_AFTERHOOK | CMD_CLIENT_TFLAG | CMD_CLIENT_CANFAIL,
+  .exec = cmd_set_buffer_exec
 };
 
 const struct cmd_entry cmd_delete_buffer_entry = {
-	.name = "delete-buffer",
-	.alias = "deleteb",
+  .name = "delete-buffer",
+  .alias = "deleteb",
 
-	.args = { "b:", 0, 0 },
-	.usage = CMD_BUFFER_USAGE,
+  .args = {"b:", 0, 0},
+  .usage = CMD_BUFFER_USAGE,
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_set_buffer_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_set_buffer_exec
 };
 
 static enum cmd_retval
-cmd_set_buffer_exec(struct cmd *self, struct cmdq_item *item)
+cmd_set_buffer_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct client		*tc = cmdq_get_target_client(item);
-	struct paste_buffer	*pb;
-	char			*bufdata, *cause;
-	const char		*bufname, *olddata;
-	size_t			 bufsize, newsize;
+  struct args *args = cmd_get_args (self);
+  struct client *tc = cmdq_get_target_client (item);
+  struct paste_buffer *pb;
+  char *bufdata, *cause;
+  const char *bufname, *olddata;
+  size_t bufsize, newsize;
 
-	bufname = args_get(args, 'b');
-	if (bufname == NULL)
-		pb = NULL;
-	else
-		pb = paste_get_name(bufname);
+  bufname = args_get (args, 'b');
+  if (bufname == NULL)
+    pb = NULL;
+  else
+    pb = paste_get_name (bufname);
 
-	if (cmd_get_entry(self) == &cmd_delete_buffer_entry) {
-		if (pb == NULL)
-			pb = paste_get_top(&bufname);
-		if (pb == NULL) {
-			cmdq_error(item, "no buffer");
-			return (CMD_RETURN_ERROR);
-		}
-		paste_free(pb);
-		return (CMD_RETURN_NORMAL);
+  if (cmd_get_entry (self) == &cmd_delete_buffer_entry)
+    {
+      if (pb == NULL)
+	pb = paste_get_top (&bufname);
+      if (pb == NULL)
+	{
+	  cmdq_error (item, "no buffer");
+	  return (CMD_RETURN_ERROR);
 	}
+      paste_free (pb);
+      return (CMD_RETURN_NORMAL);
+    }
 
-	if (args_has(args, 'n')) {
-		if (pb == NULL)
-			pb = paste_get_top(&bufname);
-		if (pb == NULL) {
-			cmdq_error(item, "no buffer");
-			return (CMD_RETURN_ERROR);
-		}
-		if (paste_rename(bufname, args_get(args, 'n'), &cause) != 0) {
-			cmdq_error(item, "%s", cause);
-			free(cause);
-			return (CMD_RETURN_ERROR);
-		}
-		return (CMD_RETURN_NORMAL);
+  if (args_has (args, 'n'))
+    {
+      if (pb == NULL)
+	pb = paste_get_top (&bufname);
+      if (pb == NULL)
+	{
+	  cmdq_error (item, "no buffer");
+	  return (CMD_RETURN_ERROR);
 	}
-
-	if (args->argc != 1) {
-		cmdq_error(item, "no data specified");
-		return (CMD_RETURN_ERROR);
+      if (paste_rename (bufname, args_get (args, 'n'), &cause) != 0)
+	{
+	  cmdq_error (item, "%s", cause);
+	  free (cause);
+	  return (CMD_RETURN_ERROR);
 	}
-	if ((newsize = strlen(args->argv[0])) == 0)
-		return (CMD_RETURN_NORMAL);
+      return (CMD_RETURN_NORMAL);
+    }
 
-	bufsize = 0;
-	bufdata = NULL;
+  if (args->argc != 1)
+    {
+      cmdq_error (item, "no data specified");
+      return (CMD_RETURN_ERROR);
+    }
+  if ((newsize = strlen (args->argv[0])) == 0)
+    return (CMD_RETURN_NORMAL);
 
-	if (args_has(args, 'a') && pb != NULL) {
-		olddata = paste_buffer_data(pb, &bufsize);
-		bufdata = xmalloc(bufsize);
-		memcpy(bufdata, olddata, bufsize);
-	}
+  bufsize = 0;
+  bufdata = NULL;
 
-	bufdata = xrealloc(bufdata, bufsize + newsize);
-	memcpy(bufdata + bufsize, args->argv[0], newsize);
-	bufsize += newsize;
+  if (args_has (args, 'a') && pb != NULL)
+    {
+      olddata = paste_buffer_data (pb, &bufsize);
+      bufdata = xmalloc (bufsize);
+      memcpy (bufdata, olddata, bufsize);
+    }
 
-	if (paste_set(bufdata, bufsize, bufname, &cause) != 0) {
-		cmdq_error(item, "%s", cause);
-		free(bufdata);
-		free(cause);
-		return (CMD_RETURN_ERROR);
-	}
-	if (args_has(args, 'w') && tc != NULL)
- 		tty_set_selection(&tc->tty, bufdata, bufsize);
+  bufdata = xrealloc (bufdata, bufsize + newsize);
+  memcpy (bufdata + bufsize, args->argv[0], newsize);
+  bufsize += newsize;
 
-	return (CMD_RETURN_NORMAL);
+  if (paste_set (bufdata, bufsize, bufname, &cause) != 0)
+    {
+      cmdq_error (item, "%s", cause);
+      free (bufdata);
+      free (cause);
+      return (CMD_RETURN_ERROR);
+    }
+  if (args_has (args, 'w') && tc != NULL)
+    tty_set_selection (&tc->tty, bufdata, bufsize);
+
+  return (CMD_RETURN_NORMAL);
 }

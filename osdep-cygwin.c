@@ -26,62 +26,65 @@
 #include "tmux.h"
 
 char *
-osdep_get_name(int fd, __unused char *tty)
+osdep_get_name (int fd, __unused char *tty)
 {
-	FILE	*f;
-	char	*path, *buf;
-	size_t	 len;
-	int	 ch;
-	pid_t	 pgrp;
+  FILE *f;
+  char *path, *buf;
+  size_t len;
+  int ch;
+  pid_t pgrp;
 
-	if ((pgrp = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((pgrp = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	xasprintf(&path, "/proc/%lld/cmdline", (long long) pgrp);
-	if ((f = fopen(path, "r")) == NULL) {
-		free(path);
-		return (NULL);
-	}
-	free(path);
+  xasprintf (&path, "/proc/%lld/cmdline", (long long) pgrp);
+  if ((f = fopen (path, "r")) == NULL)
+    {
+      free (path);
+      return (NULL);
+    }
+  free (path);
 
-	len = 0;
-	buf = NULL;
-	while ((ch = fgetc(f)) != EOF) {
-		if (ch == '\0')
-			break;
-		buf = xrealloc(buf, len + 2);
-		buf[len++] = ch;
-	}
-	if (buf != NULL)
-		buf[len] = '\0';
+  len = 0;
+  buf = NULL;
+  while ((ch = fgetc (f)) != EOF)
+    {
+      if (ch == '\0')
+	break;
+      buf = xrealloc (buf, len + 2);
+      buf[len++] = ch;
+    }
+  if (buf != NULL)
+    buf[len] = '\0';
 
-	fclose(f);
-	return (buf);
+  fclose (f);
+  return (buf);
 }
 
 char *
-osdep_get_cwd(int fd)
+osdep_get_cwd (int fd)
 {
-	static char	 target[MAXPATHLEN + 1];
-	char		*path;
-	pid_t		 pgrp;
-	ssize_t		 n;
+  static char target[MAXPATHLEN + 1];
+  char *path;
+  pid_t pgrp;
+  ssize_t n;
 
-	if ((pgrp = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((pgrp = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	xasprintf(&path, "/proc/%lld/cwd", (long long) pgrp);
-	n = readlink(path, target, MAXPATHLEN);
-	free(path);
-	if (n > 0) {
-		target[n] = '\0';
-		return (target);
-	}
-	return (NULL);
+  xasprintf (&path, "/proc/%lld/cwd", (long long) pgrp);
+  n = readlink (path, target, MAXPATHLEN);
+  free (path);
+  if (n > 0)
+    {
+      target[n] = '\0';
+      return (target);
+    }
+  return (NULL);
 }
 
 struct event_base *
-osdep_event_init(void)
+osdep_event_init (void)
 {
-	return (event_init());
+  return (event_init ());
 }

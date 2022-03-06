@@ -27,82 +27,83 @@
 
 #include "compat.h"
 
-char			*osdep_get_name(int, char *);
-char			*osdep_get_cwd(int);
-struct event_base	*osdep_event_init(void);
+char *osdep_get_name (int, char *);
+char *osdep_get_cwd (int);
+struct event_base *osdep_event_init (void);
 
 #ifndef __unused
 #define __unused __attribute__ ((__unused__))
 #endif
 
 char *
-osdep_get_name(int fd, __unused char *tty)
+osdep_get_name (int fd, __unused char *tty)
 {
 #ifdef __MAC_10_7
-	struct proc_bsdshortinfo	bsdinfo;
-	pid_t				pgrp;
-	int				ret;
+  struct proc_bsdshortinfo bsdinfo;
+  pid_t pgrp;
+  int ret;
 
-	if ((pgrp = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((pgrp = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	ret = proc_pidinfo(pgrp, PROC_PIDT_SHORTBSDINFO, 0,
-			&bsdinfo, sizeof bsdinfo);
-	if (ret == sizeof bsdinfo && *bsdinfo.pbsi_comm != '\0')
-		return (strdup(bsdinfo.pbsi_comm));
-	return (NULL);
+  ret = proc_pidinfo (pgrp, PROC_PIDT_SHORTBSDINFO, 0,
+		      &bsdinfo, sizeof bsdinfo);
+  if (ret == sizeof bsdinfo && *bsdinfo.pbsi_comm != '\0')
+    return (strdup (bsdinfo.pbsi_comm));
+  return (NULL);
 #else
-	int	mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, 0 };
-	size_t	size;
-	struct kinfo_proc kp;
+  int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, 0 };
+  size_t size;
+  struct kinfo_proc kp;
 
-	if ((mib[3] = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((mib[3] = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	size = sizeof kp;
-	if (sysctl(mib, 4, &kp, &size, NULL, 0) == -1)
-		return (NULL);
-	if (size != (sizeof kp) || *kp.kp_proc.p_comm == '\0')
-		return (NULL);
+  size = sizeof kp;
+  if (sysctl (mib, 4, &kp, &size, NULL, 0) == -1)
+    return (NULL);
+  if (size != (sizeof kp) || *kp.kp_proc.p_comm == '\0')
+    return (NULL);
 
-	return (strdup(kp.kp_proc.p_comm));
+  return (strdup (kp.kp_proc.p_comm));
 #endif
 }
 
 char *
-osdep_get_cwd(int fd)
+osdep_get_cwd (int fd)
 {
-	static char			wd[PATH_MAX];
-	struct proc_vnodepathinfo	pathinfo;
-	pid_t				pgrp;
-	int				ret;
+  static char wd[PATH_MAX];
+  struct proc_vnodepathinfo pathinfo;
+  pid_t pgrp;
+  int ret;
 
-	if ((pgrp = tcgetpgrp(fd)) == -1)
-		return (NULL);
+  if ((pgrp = tcgetpgrp (fd)) == -1)
+    return (NULL);
 
-	ret = proc_pidinfo(pgrp, PROC_PIDVNODEPATHINFO, 0,
-	    &pathinfo, sizeof pathinfo);
-	if (ret == sizeof pathinfo) {
-		strlcpy(wd, pathinfo.pvi_cdir.vip_path, sizeof wd);
-		return (wd);
-	}
-	return (NULL);
+  ret = proc_pidinfo (pgrp, PROC_PIDVNODEPATHINFO, 0,
+		      &pathinfo, sizeof pathinfo);
+  if (ret == sizeof pathinfo)
+    {
+      strlcpy (wd, pathinfo.pvi_cdir.vip_path, sizeof wd);
+      return (wd);
+    }
+  return (NULL);
 }
 
 struct event_base *
-osdep_event_init(void)
+osdep_event_init (void)
 {
-	struct event_base	*base;
+  struct event_base *base;
 
-	/*
-	 * On OS X, kqueue and poll are both completely broken and don't
-	 * work on anything except socket file descriptors (yes, really).
-	 */
-	setenv("EVENT_NOKQUEUE", "1", 1);
-	setenv("EVENT_NOPOLL", "1", 1);
+  /*
+   * On OS X, kqueue and poll are both completely broken and don't
+   * work on anything except socket file descriptors (yes, really).
+   */
+  setenv ("EVENT_NOKQUEUE", "1", 1);
+  setenv ("EVENT_NOPOLL", "1", 1);
 
-	base = event_init();
-	unsetenv("EVENT_NOKQUEUE");
-	unsetenv("EVENT_NOPOLL");
-	return (base);
+  base = event_init ();
+  unsetenv ("EVENT_NOKQUEUE");
+  unsetenv ("EVENT_NOPOLL");
+  return (base);
 }

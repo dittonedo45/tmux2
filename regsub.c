@@ -24,97 +24,104 @@
 #include "tmux.h"
 
 static void
-regsub_copy(char **buf, size_t *len, const char *text, size_t start, size_t end)
+regsub_copy (char **buf, size_t *len, const char *text, size_t start,
+	     size_t end)
 {
-	size_t	add = end - start;
+  size_t add = end - start;
 
-	*buf = xrealloc(*buf, (*len) + add + 1);
-	memcpy((*buf) + *len, text + start, add);
-	(*len) += add;
+  *buf = xrealloc (*buf, (*len) + add + 1);
+  memcpy ((*buf) + *len, text + start, add);
+  (*len) += add;
 }
 
 static void
-regsub_expand(char **buf, size_t *len, const char *with, const char *text,
-    regmatch_t *m, u_int n)
+regsub_expand (char **buf, size_t *len, const char *with, const char *text,
+	       regmatch_t * m, u_int n)
 {
-	const char	*cp;
-	u_int		 i;
+  const char *cp;
+  u_int i;
 
-	for (cp = with; *cp != '\0'; cp++) {
-		if (*cp == '\\') {
-			cp++;
-			if (*cp >= '0' && *cp <= '9') {
-				i = *cp - '0';
-				if (i < n && m[i].rm_so != m[i].rm_eo) {
-					regsub_copy(buf, len, text, m[i].rm_so,
-					    m[i].rm_eo);
-					continue;
-				}
-			}
+  for (cp = with; *cp != '\0'; cp++)
+    {
+      if (*cp == '\\')
+	{
+	  cp++;
+	  if (*cp >= '0' && *cp <= '9')
+	    {
+	      i = *cp - '0';
+	      if (i < n && m[i].rm_so != m[i].rm_eo)
+		{
+		  regsub_copy (buf, len, text, m[i].rm_so, m[i].rm_eo);
+		  continue;
 		}
-		*buf = xrealloc(*buf, (*len) + 2);
-		(*buf)[(*len)++] = *cp;
+	    }
 	}
+      *buf = xrealloc (*buf, (*len) + 2);
+      (*buf)[(*len)++] = *cp;
+    }
 }
 
 char *
-regsub(const char *pattern, const char *with, const char *text, int flags)
+regsub (const char *pattern, const char *with, const char *text, int flags)
 {
-	regex_t		 r;
-	regmatch_t	 m[10];
-	ssize_t		 start, end, last, len = 0;
-	int		 empty = 0;
-	char		*buf = NULL;
+  regex_t r;
+  regmatch_t m[10];
+  ssize_t start, end, last, len = 0;
+  int empty = 0;
+  char *buf = NULL;
 
-	if (*text == '\0')
-		return (xstrdup(""));
-	if (regcomp(&r, pattern, flags) != 0)
-		return (NULL);
+  if (*text == '\0')
+    return (xstrdup (""));
+  if (regcomp (&r, pattern, flags) != 0)
+    return (NULL);
 
-	start = 0;
-	last = 0;
-	end = strlen(text);
+  start = 0;
+  last = 0;
+  end = strlen (text);
 
-	while (start <= end) {
-		if (regexec(&r, text + start, nitems(m), m, 0) != 0) {
-			regsub_copy(&buf, &len, text, start, end);
-			break;
-		}
-
-		/*
-		 * Append any text not part of this match (from the end of the
-		 * last match).
-		 */
-		regsub_copy(&buf, &len, text, last, m[0].rm_so + start);
-
-		/*
-		 * If the last match was empty and this one isn't (it is either
-		 * later or has matched text), expand this match. If it is
-		 * empty, move on one character and try again from there.
-		 */
-		if (empty ||
-		    start + m[0].rm_so != last ||
-		    m[0].rm_so != m[0].rm_eo) {
-			regsub_expand(&buf, &len, with, text + start, m,
-			    nitems(m));
-
-			last = start + m[0].rm_eo;
-			start += m[0].rm_eo;
-			empty = 0;
-		} else {
-			last = start + m[0].rm_eo;
-			start += m[0].rm_eo + 1;
-			empty = 1;
-		}
-
-		/* Stop now if anchored to start. */
-		if (*pattern == '^') {
-			regsub_copy(&buf, &len, text, start, end);
-			break;
-		}
+  while (start <= end)
+    {
+      if (regexec (&r, text + start, nitems (m), m, 0) != 0)
+	{
+	  regsub_copy (&buf, &len, text, start, end);
+	  break;
 	}
-	buf[len] = '\0';
 
-	regfree(&r);
-	return (buf);
+      /*
+       * Append any text not part of this match (from the end of the
+       * last match).
+       */
+      regsub_copy (&buf, &len, text, last, m[0].rm_so + start);
+
+      /*
+       * If the last match was empty and this one isn't (it is either
+       * later or has matched text), expand this match. If it is
+       * empty, move on one character and try again from there.
+       */
+      if (empty || start + m[0].rm_so != last || m[0].rm_so != m[0].rm_eo)
+	{
+	  regsub_expand (&buf, &len, with, text + start, m, nitems (m));
+
+	  last = start + m[0].rm_eo;
+	  start += m[0].rm_eo;
+	  empty = 0;
+	}
+      else
+	{
+	  last = start + m[0].rm_eo;
+	  start += m[0].rm_eo + 1;
+	  empty = 1;
+	}
+
+      /* Stop now if anchored to start. */
+      if (*pattern == '^')
+	{
+	  regsub_copy (&buf, &len, text, start, end);
+	  break;
+	}
+    }
+  buf[len] = '\0';
+
+  regfree (&r);
+  return (buf);
 }

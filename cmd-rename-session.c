@@ -27,50 +27,52 @@
  * Change session name.
  */
 
-static enum cmd_retval	cmd_rename_session_exec(struct cmd *,
-			    struct cmdq_item *);
+static enum cmd_retval cmd_rename_session_exec (struct cmd *,
+						struct cmdq_item *);
 
 const struct cmd_entry cmd_rename_session_entry = {
-	.name = "rename-session",
-	.alias = "rename",
+  .name = "rename-session",
+  .alias = "rename",
 
-	.args = { "t:", 1, 1 },
-	.usage = CMD_TARGET_SESSION_USAGE " new-name",
+  .args = {"t:", 1, 1},
+  .usage = CMD_TARGET_SESSION_USAGE " new-name",
 
-	.target = { 't', CMD_FIND_SESSION, 0 },
+  .target = {'t', CMD_FIND_SESSION, 0},
 
-	.flags = CMD_AFTERHOOK,
-	.exec = cmd_rename_session_exec
+  .flags = CMD_AFTERHOOK,
+  .exec = cmd_rename_session_exec
 };
 
 static enum cmd_retval
-cmd_rename_session_exec(struct cmd *self, struct cmdq_item *item)
+cmd_rename_session_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct session		*s = target->s;
-	char			*newname, *tmp;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct session *s = target->s;
+  char *newname, *tmp;
 
-	tmp = format_single_from_target(item, args->argv[0]);
-	newname = session_check_name(tmp);
-	free(tmp);
-	if (strcmp(newname, s->name) == 0) {
-		free(newname);
-		return (CMD_RETURN_NORMAL);
-	}
-	if (session_find(newname) != NULL) {
-		cmdq_error(item, "duplicate session: %s", newname);
-		free(newname);
-		return (CMD_RETURN_ERROR);
-	}
+  tmp = format_single_from_target (item, args->argv[0]);
+  newname = session_check_name (tmp);
+  free (tmp);
+  if (strcmp (newname, s->name) == 0)
+    {
+      free (newname);
+      return (CMD_RETURN_NORMAL);
+    }
+  if (session_find (newname) != NULL)
+    {
+      cmdq_error (item, "duplicate session: %s", newname);
+      free (newname);
+      return (CMD_RETURN_ERROR);
+    }
 
-	RB_REMOVE(sessions, &sessions, s);
-	free(s->name);
-	s->name = newname;
-	RB_INSERT(sessions, &sessions, s);
+  RB_REMOVE (sessions, &sessions, s);
+  free (s->name);
+  s->name = newname;
+  RB_INSERT (sessions, &sessions, s);
 
-	server_status_session(s);
-	notify_session("session-renamed", s);
+  server_status_session (s);
+  notify_session ("session-renamed", s);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

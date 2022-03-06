@@ -24,92 +24,105 @@
  * Rotate the panes in a window.
  */
 
-static enum cmd_retval	cmd_rotate_window_exec(struct cmd *,
-			    struct cmdq_item *);
+static enum cmd_retval cmd_rotate_window_exec (struct cmd *,
+					       struct cmdq_item *);
 
 const struct cmd_entry cmd_rotate_window_entry = {
-	.name = "rotate-window",
-	.alias = "rotatew",
+  .name = "rotate-window",
+  .alias = "rotatew",
 
-	.args = { "Dt:UZ", 0, 0 },
-	.usage = "[-DUZ] " CMD_TARGET_WINDOW_USAGE,
+  .args = {"Dt:UZ", 0, 0},
+  .usage = "[-DUZ] " CMD_TARGET_WINDOW_USAGE,
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+  .target = {'t', CMD_FIND_WINDOW, 0},
 
-	.flags = 0,
-	.exec = cmd_rotate_window_exec
+  .flags = 0,
+  .exec = cmd_rotate_window_exec
 };
 
 static enum cmd_retval
-cmd_rotate_window_exec(struct cmd *self, struct cmdq_item *item)
+cmd_rotate_window_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args		*args = cmd_get_args(self);
-	struct cmd_find_state	*current = cmdq_get_current(item);
-	struct cmd_find_state	*target = cmdq_get_target(item);
-	struct winlink		*wl = target->wl;
-	struct window		*w = wl->window;
-	struct window_pane	*wp, *wp2;
-	struct layout_cell	*lc;
-	u_int			 sx, sy, xoff, yoff;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *current = cmdq_get_current (item);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct winlink *wl = target->wl;
+  struct window *w = wl->window;
+  struct window_pane *wp, *wp2;
+  struct layout_cell *lc;
+  u_int sx, sy, xoff, yoff;
 
-	window_push_zoom(w, 0, args_has(args, 'Z'));
+  window_push_zoom (w, 0, args_has (args, 'Z'));
 
-	if (args_has(args, 'D')) {
-		wp = TAILQ_LAST(&w->panes, window_panes);
-		TAILQ_REMOVE(&w->panes, wp, entry);
-		TAILQ_INSERT_HEAD(&w->panes, wp, entry);
+  if (args_has (args, 'D'))
+    {
+      wp = TAILQ_LAST (&w->panes, window_panes);
+      TAILQ_REMOVE (&w->panes, wp, entry);
+      TAILQ_INSERT_HEAD (&w->panes, wp, entry);
 
-		lc = wp->layout_cell;
-		xoff = wp->xoff; yoff = wp->yoff;
-		sx = wp->sx; sy = wp->sy;
-		TAILQ_FOREACH(wp, &w->panes, entry) {
-			if ((wp2 = TAILQ_NEXT(wp, entry)) == NULL)
-				break;
-			wp->layout_cell = wp2->layout_cell;
-			if (wp->layout_cell != NULL)
-				wp->layout_cell->wp = wp;
-			wp->xoff = wp2->xoff; wp->yoff = wp2->yoff;
-			window_pane_resize(wp, wp2->sx, wp2->sy);
-		}
-		wp->layout_cell = lc;
-		if (wp->layout_cell != NULL)
-			wp->layout_cell->wp = wp;
-		wp->xoff = xoff; wp->yoff = yoff;
-		window_pane_resize(wp, sx, sy);
+      lc = wp->layout_cell;
+      xoff = wp->xoff;
+      yoff = wp->yoff;
+      sx = wp->sx;
+      sy = wp->sy;
+      TAILQ_FOREACH (wp, &w->panes, entry)
+      {
+	if ((wp2 = TAILQ_NEXT (wp, entry)) == NULL)
+	  break;
+	wp->layout_cell = wp2->layout_cell;
+	if (wp->layout_cell != NULL)
+	  wp->layout_cell->wp = wp;
+	wp->xoff = wp2->xoff;
+	wp->yoff = wp2->yoff;
+	window_pane_resize (wp, wp2->sx, wp2->sy);
+      }
+      wp->layout_cell = lc;
+      if (wp->layout_cell != NULL)
+	wp->layout_cell->wp = wp;
+      wp->xoff = xoff;
+      wp->yoff = yoff;
+      window_pane_resize (wp, sx, sy);
 
-		if ((wp = TAILQ_PREV(w->active, window_panes, entry)) == NULL)
-			wp = TAILQ_LAST(&w->panes, window_panes);
-	} else {
-		wp = TAILQ_FIRST(&w->panes);
-		TAILQ_REMOVE(&w->panes, wp, entry);
-		TAILQ_INSERT_TAIL(&w->panes, wp, entry);
+      if ((wp = TAILQ_PREV (w->active, window_panes, entry)) == NULL)
+	wp = TAILQ_LAST (&w->panes, window_panes);
+    }
+  else
+    {
+      wp = TAILQ_FIRST (&w->panes);
+      TAILQ_REMOVE (&w->panes, wp, entry);
+      TAILQ_INSERT_TAIL (&w->panes, wp, entry);
 
-		lc = wp->layout_cell;
-		xoff = wp->xoff; yoff = wp->yoff;
-		sx = wp->sx; sy = wp->sy;
-		TAILQ_FOREACH_REVERSE(wp, &w->panes, window_panes, entry) {
-			if ((wp2 = TAILQ_PREV(wp, window_panes, entry)) == NULL)
-				break;
-			wp->layout_cell = wp2->layout_cell;
-			if (wp->layout_cell != NULL)
-				wp->layout_cell->wp = wp;
-			wp->xoff = wp2->xoff; wp->yoff = wp2->yoff;
-			window_pane_resize(wp, wp2->sx, wp2->sy);
-		}
-		wp->layout_cell = lc;
-		if (wp->layout_cell != NULL)
-			wp->layout_cell->wp = wp;
-		wp->xoff = xoff; wp->yoff = yoff;
-		window_pane_resize(wp, sx, sy);
+      lc = wp->layout_cell;
+      xoff = wp->xoff;
+      yoff = wp->yoff;
+      sx = wp->sx;
+      sy = wp->sy;
+      TAILQ_FOREACH_REVERSE (wp, &w->panes, window_panes, entry)
+      {
+	if ((wp2 = TAILQ_PREV (wp, window_panes, entry)) == NULL)
+	  break;
+	wp->layout_cell = wp2->layout_cell;
+	if (wp->layout_cell != NULL)
+	  wp->layout_cell->wp = wp;
+	wp->xoff = wp2->xoff;
+	wp->yoff = wp2->yoff;
+	window_pane_resize (wp, wp2->sx, wp2->sy);
+      }
+      wp->layout_cell = lc;
+      if (wp->layout_cell != NULL)
+	wp->layout_cell->wp = wp;
+      wp->xoff = xoff;
+      wp->yoff = yoff;
+      window_pane_resize (wp, sx, sy);
 
-		if ((wp = TAILQ_NEXT(w->active, entry)) == NULL)
-			wp = TAILQ_FIRST(&w->panes);
-	}
+      if ((wp = TAILQ_NEXT (w->active, entry)) == NULL)
+	wp = TAILQ_FIRST (&w->panes);
+    }
 
-	window_set_active_pane(w, wp, 1);
-	cmd_find_from_winlink_pane(current, wl, wp, 0);
-	window_pop_zoom(w);
-	server_redraw_window(w);
+  window_set_active_pane (w, wp, 1);
+  cmd_find_from_winlink_pane (current, wl, wp, 0);
+  window_pop_zoom (w);
+  server_redraw_window (w);
 
-	return (CMD_RETURN_NORMAL);
+  return (CMD_RETURN_NORMAL);
 }

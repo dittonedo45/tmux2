@@ -24,84 +24,89 @@
  * Enter a mode.
  */
 
-static enum cmd_retval	cmd_choose_tree_exec(struct cmd *, struct cmdq_item *);
+static enum cmd_retval cmd_choose_tree_exec (struct cmd *,
+					     struct cmdq_item *);
 
 const struct cmd_entry cmd_choose_tree_entry = {
-	.name = "choose-tree",
-	.alias = NULL,
+  .name = "choose-tree",
+  .alias = NULL,
 
-	.args = { "F:f:GK:NO:rst:wZ", 0, 1 },
-	.usage = "[-GNrswZ] [-F format] [-f filter] [-K key-format] "
-		 "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
+  .args = {"F:f:GK:NO:rst:wZ", 0, 1},
+  .usage = "[-GNrswZ] [-F format] [-f filter] [-K key-format] "
+    "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
 
-	.target = { 't', CMD_FIND_PANE, 0 },
+  .target = {'t', CMD_FIND_PANE, 0},
 
-	.flags = 0,
-	.exec = cmd_choose_tree_exec
+  .flags = 0,
+  .exec = cmd_choose_tree_exec
 };
 
 const struct cmd_entry cmd_choose_client_entry = {
-	.name = "choose-client",
-	.alias = NULL,
+  .name = "choose-client",
+  .alias = NULL,
 
-	.args = { "F:f:K:NO:rt:Z", 0, 1 },
-	.usage = "[-NrZ] [-F format] [-f filter] [-K key-format] "
-		 "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
+  .args = {"F:f:K:NO:rt:Z", 0, 1},
+  .usage = "[-NrZ] [-F format] [-f filter] [-K key-format] "
+    "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
 
-	.target = { 't', CMD_FIND_PANE, 0 },
+  .target = {'t', CMD_FIND_PANE, 0},
 
-	.flags = 0,
-	.exec = cmd_choose_tree_exec
+  .flags = 0,
+  .exec = cmd_choose_tree_exec
 };
 
 const struct cmd_entry cmd_choose_buffer_entry = {
-	.name = "choose-buffer",
-	.alias = NULL,
+  .name = "choose-buffer",
+  .alias = NULL,
 
-	.args = { "F:f:K:NO:rt:Z", 0, 1 },
-	.usage = "[-NrZ] [-F format] [-f filter] [-K key-format] "
-		 "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
+  .args = {"F:f:K:NO:rt:Z", 0, 1},
+  .usage = "[-NrZ] [-F format] [-f filter] [-K key-format] "
+    "[-O sort-order] " CMD_TARGET_PANE_USAGE " [template]",
 
-	.target = { 't', CMD_FIND_PANE, 0 },
+  .target = {'t', CMD_FIND_PANE, 0},
 
-	.flags = 0,
-	.exec = cmd_choose_tree_exec
+  .flags = 0,
+  .exec = cmd_choose_tree_exec
 };
 
 const struct cmd_entry cmd_customize_mode_entry = {
-	.name = "customize-mode",
-	.alias = NULL,
+  .name = "customize-mode",
+  .alias = NULL,
 
-	.args = { "F:f:Nt:Z", 0, 0 },
-	.usage = "[-NZ] [-F format] [-f filter] " CMD_TARGET_PANE_USAGE,
+  .args = {"F:f:Nt:Z", 0, 0},
+  .usage = "[-NZ] [-F format] [-f filter] " CMD_TARGET_PANE_USAGE,
 
-	.target = { 't', CMD_FIND_PANE, 0 },
+  .target = {'t', CMD_FIND_PANE, 0},
 
-	.flags = 0,
-	.exec = cmd_choose_tree_exec
+  .flags = 0,
+  .exec = cmd_choose_tree_exec
 };
 
 static enum cmd_retval
-cmd_choose_tree_exec(struct cmd *self, struct cmdq_item *item)
+cmd_choose_tree_exec (struct cmd *self, struct cmdq_item *item)
 {
-	struct args			*args = cmd_get_args(self);
-	struct cmd_find_state		*target = cmdq_get_target(item);
-	struct window_pane		*wp = target->wp;
-	const struct window_mode	*mode;
+  struct args *args = cmd_get_args (self);
+  struct cmd_find_state *target = cmdq_get_target (item);
+  struct window_pane *wp = target->wp;
+  const struct window_mode *mode;
 
-	if (cmd_get_entry(self) == &cmd_choose_buffer_entry) {
-		if (paste_get_top(NULL) == NULL)
-			return (CMD_RETURN_NORMAL);
-		mode = &window_buffer_mode;
-	} else if (cmd_get_entry(self) == &cmd_choose_client_entry) {
-		if (server_client_how_many() == 0)
-			return (CMD_RETURN_NORMAL);
-		mode = &window_client_mode;
-	} else if (cmd_get_entry(self) == &cmd_customize_mode_entry)
-		mode = &window_customize_mode;
-	else
-		mode = &window_tree_mode;
-
-	window_pane_set_mode(wp, NULL, mode, target, args);
+  if (cmd_get_entry (self) == &cmd_choose_buffer_entry)
+    {
+      if (paste_get_top (NULL) == NULL)
 	return (CMD_RETURN_NORMAL);
+      mode = &window_buffer_mode;
+    }
+  else if (cmd_get_entry (self) == &cmd_choose_client_entry)
+    {
+      if (server_client_how_many () == 0)
+	return (CMD_RETURN_NORMAL);
+      mode = &window_client_mode;
+    }
+  else if (cmd_get_entry (self) == &cmd_customize_mode_entry)
+    mode = &window_customize_mode;
+  else
+    mode = &window_tree_mode;
+
+  window_pane_set_mode (wp, NULL, mode, target, args);
+  return (CMD_RETURN_NORMAL);
 }
