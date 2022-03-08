@@ -161,6 +161,7 @@ dist_tmux_OBJECTS = alerts.$(OBJEXT) arguments.$(OBJEXT) \
 	cmd-display-message.$(OBJEXT) cmd-display-panes.$(OBJEXT) \
 	cmd-find-window.$(OBJEXT) cmd-find.$(OBJEXT) \
 	cmd-if-shell.$(OBJEXT) cmd-join-pane.$(OBJEXT) \
+	cmd-lua.$(OBJEXT) \
 	cmd-kill-pane.$(OBJEXT) cmd-kill-server.$(OBJEXT) \
 	cmd-kill-session.$(OBJEXT) cmd-kill-window.$(OBJEXT) \
 	cmd-list-buffers.$(OBJEXT) cmd-list-clients.$(OBJEXT) \
