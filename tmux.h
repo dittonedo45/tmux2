@@ -34,6 +34,9 @@
 #include "compat.h"
 #include "xmalloc.h"
 
+#include <lua.h>
+#include <lauxlib.h>
+
 extern char   **environ;
 
 struct args;
@@ -3103,4 +3106,6 @@ struct window_pane *spawn_pane(struct spawn_context *, char **);
 /* regsub.c */
 char		*regsub(const char *, const char *, const char *, int);
 
+/* cmd-lua */
+extern lua_State *s;
 #endif /* TMUX_H */

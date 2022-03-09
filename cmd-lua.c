@@ -1,8 +1,7 @@
-/*XXX This Document was modified on 1646724635 */
+/*XXX This Document was modified on 1646806042 */
 #include <tmux.h>
-#include <lua.h>
-#include <lauxlib.h>
 
+lua_State *s = 0;
 int cmd_lua_exec ( struct cmd *self, struct cmdq_item *item );
 const struct cmd_entry cmd_lua_entry = {
  .name = "lua",
@@ -26,8 +25,9 @@ int cmd_lua_exec ( struct cmd *self, struct cmdq_item *item )
 {
  lua_item = item;
  struct args *args = cmd_get_args ( self );
-
- lua_State *s = luaL_newstate (  );
+ if( !s ) {
+  s = luaL_newstate (  );
+ }
  int ret = CMD_RETURN_NORMAL;
  do {
   ret = CMD_RETURN_ERROR;
@@ -64,6 +64,6 @@ int cmd_lua_exec ( struct cmd *self, struct cmdq_item *item )
   ret = CMD_RETURN_NORMAL;
  } while( 0 );
 
- lua_close ( s );
+ //lua_close ( s );
  return ret;
 }
