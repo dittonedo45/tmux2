@@ -3108,4 +3108,5 @@ char		*regsub(const char *, const char *, const char *, int);
 
 /* cmd-lua */
 extern lua_State *s;
+
 #endif /* TMUX_H */

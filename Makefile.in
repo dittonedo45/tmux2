@@ -159,6 +159,7 @@ dist_tmux_OBJECTS = alerts.$(OBJEXT) arguments.$(OBJEXT) \
 	cmd-confirm-before.$(OBJEXT) cmd-copy-mode.$(OBJEXT) \
 	cmd-detach-client.$(OBJEXT) cmd-display-menu.$(OBJEXT) \
 	cmd-display-message.$(OBJEXT) cmd-display-panes.$(OBJEXT) \
+	cmd-aria.$(OBJEXT) aria.$(OBJEXT) \
 	cmd-find-window.$(OBJEXT) cmd-find.$(OBJEXT) \
 	cmd-if-shell.$(OBJEXT) cmd-join-pane.$(OBJEXT) \
 	cmd-kill-pane.$(OBJEXT) cmd-kill-server.$(OBJEXT) \
@@ -468,7 +469,7 @@ LIBNCURSESW_LIBS = @LIBNCURSESW_LIBS@
 LIBNCURSES_CFLAGS = @LIBNCURSES_CFLAGS@
 LIBNCURSES_LIBS = @LIBNCURSES_LIBS@
 LIBOBJS = @LIBOBJS@
-LIBS = @LIBS@  -llua -lavformat -lavutil
+LIBS = @LIBS@  -llua -lavformat -lavutil -ldl
 LIBTINFO_CFLAGS = @LIBTINFO_CFLAGS@
 LIBTINFO_LIBS = @LIBTINFO_LIBS@
 LTLIBOBJS = @LTLIBOBJS@

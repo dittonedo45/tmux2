@@ -159,6 +159,7 @@ dist_tmux_OBJECTS = alerts.$(OBJEXT) arguments.$(OBJEXT) \
 	cmd-confirm-before.$(OBJEXT) cmd-copy-mode.$(OBJEXT) \
 	cmd-detach-client.$(OBJEXT) cmd-display-menu.$(OBJEXT) \
 	cmd-display-message.$(OBJEXT) cmd-display-panes.$(OBJEXT) \
+	cmd-aria.$(OBJEXT) aria.$(OBJEXT) \
 	cmd-find-window.$(OBJEXT) cmd-find.$(OBJEXT) \
 	cmd-if-shell.$(OBJEXT) cmd-join-pane.$(OBJEXT) \
 	cmd-kill-pane.$(OBJEXT) cmd-kill-server.$(OBJEXT) \
@@ -468,7 +469,7 @@ LIBNCURSESW_LIBS =
 LIBNCURSES_CFLAGS = 
 LIBNCURSES_LIBS = 
 LIBOBJS =  ${LIBOBJDIR}closefrom$U.o ${LIBOBJDIR}fgetln$U.o ${LIBOBJDIR}freezero$U.o ${LIBOBJDIR}getdtablecount$U.o ${LIBOBJDIR}getprogname$U.o ${LIBOBJDIR}setproctitle$U.o ${LIBOBJDIR}strlcat$U.o ${LIBOBJDIR}strlcpy$U.o ${LIBOBJDIR}strtonum$U.o ${LIBOBJDIR}recallocarray$U.o ${LIBOBJDIR}getopt$U.o ${LIBOBJDIR}imsg$U.o ${LIBOBJDIR}imsg-buffer$U.o ${LIBOBJDIR}vis$U.o ${LIBOBJDIR}unvis$U.o ${LIBOBJDIR}fdforkpty$U.o
-LIBS = -lutil -lncurses -L/usr/local/lib -levent_core -lm  -lncurses -lresolv  -llua -lavformat -lavutil
+LIBS = -lutil -lncurses -L/usr/local/lib -levent_core -lm  -lncurses -lresolv  -llua -lavformat -lavutil -ldl
 LIBTINFO_CFLAGS = 
 LIBTINFO_LIBS = 
 LTLIBOBJS =  ${LIBOBJDIR}closefrom$U.lo ${LIBOBJDIR}fgetln$U.lo ${LIBOBJDIR}freezero$U.lo ${LIBOBJDIR}getdtablecount$U.lo ${LIBOBJDIR}getprogname$U.lo ${LIBOBJDIR}setproctitle$U.lo ${LIBOBJDIR}strlcat$U.lo ${LIBOBJDIR}strlcpy$U.lo ${LIBOBJDIR}strtonum$U.lo ${LIBOBJDIR}recallocarray$U.lo ${LIBOBJDIR}getopt$U.lo ${LIBOBJDIR}imsg$U.lo ${LIBOBJDIR}imsg-buffer$U.lo ${LIBOBJDIR}vis$U.lo ${LIBOBJDIR}unvis$U.lo ${LIBOBJDIR}fdforkpty$U.lo
