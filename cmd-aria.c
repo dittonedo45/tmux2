@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646985929 */
+/*XXX This Document was modified on 1646986260 */
 #include <tmux.h>
 #include <string.h>
 
@@ -61,12 +61,11 @@ ar_Value *tl_TOF_func ( ar_State * s, ar_Value * args )
  const struct options_table_entry *p = options_table;
 
  while( p && p->name ) {
-  ar_Value *arg = ar_new_list ( s, 9,
+  ar_Value *arg = ar_new_list ( s, 8,
                                 ( ar_new_string ( s, p->name ) ),
                                 ( ar_new_number ( s, p->type ) ),
                                 ( ar_new_number ( s, p->minimum ) ),
                                 ( ar_new_number ( s, p->maximum ) ),
-                                ( ar_new_number ( s, p->type ) ),
                                 ( char_ss_2 ( s, p->choices ) ),
                                 ( ar_new_string ( s, p->default_str ) ),
                                 ( ar_new_number ( s, p->default_num ) ),
