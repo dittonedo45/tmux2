@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646981872 */
+/*XXX This Document was modified on 1646982279 */
 /**
  * Copyright (c) 2018 rxi
  *
@@ -87,6 +87,8 @@ ar_Value *ar_new_env ( ar_State * S, ar_Value * parent )
  res->u.env.map = NULL;
  return res;
 }
+
+extern int tm_printf ( const char *, ... );
 
 ar_Value *ar_new_pair ( ar_State * S, ar_Value * car, ar_Value * cdr )
 {
@@ -1068,7 +1070,7 @@ static ar_Value *f_type ( ar_State * S, ar_Value * args )
 static ar_Value *X_obj ( ar_State * s, ar_Value * a )
 {
  while( a ) {
-  printf ( "%s\n", ar_type_str ( ar_type ( a ) ) );
+  tm_printf ( "%s\n", ar_type_str ( ar_type ( a ) ) );
   if( !ar_cdr ( a ) )
    break;
   a = ar_cdr ( a );
@@ -1084,10 +1086,10 @@ static ar_Value *f_print ( ar_State * S, ar_Value * args )
   fwrite ( str, len, 1, stdout );
   if( !ar_cdr ( args ) )
    break;
-  printf ( " " );
+  tm_printf ( " " );
   args = ar_cdr ( args );
  }
- printf ( "\n" );
+ tm_printf ( "\n" );
  return ar_car ( args );
 }
 
@@ -1462,14 +1464,14 @@ void ar_error ( ar_State * S, ar_Value * err )
    pop_frame ( S, args );
   S->panic ( S, args );
  } else {
-  printf ( "error: %s\n", ar_to_string ( S, err ) );
+  tm_printf ( "error: %s\n", ar_to_string ( S, err ) );
   if( err != S->oom_error ) {
    ar_Value *v = traceback ( S, &S->base_frame );
-   printf ( "traceback:\n" );
+   tm_printf ( "traceback:\n" );
    while( v ) {
-	printf ( "  [%s] %.50s\n",
-	         ar_to_string ( S, debug_location ( S, ar_car ( v ) ) ),
-	         ar_to_string ( S, ar_car ( v ) ) );
+	tm_printf ( "  [%s] %.50s\n",
+	            ar_to_string ( S, debug_location ( S, ar_car ( v ) ) ),
+	            ar_to_string ( S, ar_car ( v ) ) );
 	v = ar_cdr ( v );
    }
   }

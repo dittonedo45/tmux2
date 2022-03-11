@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646980744 */
+/*XXX This Document was modified on 1646982400 */
 #include <tmux.h>
 #include <string.h>
 
@@ -67,6 +67,19 @@ ar_Value *tl_TOF_func ( ar_State * s, ar_Value * args )
  return ar_car ( args );
 }
 
+int tm_printf ( const char *str, ... )
+{
+ va_list ap;
+ va_start ( ap, str );
+ char *s = 0;
+ vasprintf ( &s, str, ap );
+ cmdq_print ( aria_item, "%s", s );
+ free ( s );
+ va_end ( ap );
+
+ return 0;
+}
+
 int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
 {
  aria_item = item;
@@ -86,11 +99,7 @@ int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
    if( args->argc && lisp_s ) {
 	char *fi_or_source = args->argv[0];
 
-	if( stat ( fi_or_source, NULL ) ) {
-	 ar_do_string ( lisp_s, fi_or_source );
-	} else {
-	 ar_do_file ( lisp_s, fi_or_source );
-	}
+	ar_do_string ( lisp_s, fi_or_source );
    }
   } while( 0 );
   ar_close_state ( lisp_s );
