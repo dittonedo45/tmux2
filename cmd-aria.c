@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646910291 */
+/*XXX This Document was modified on 1646980590 */
 #include <tmux.h>
 #include <string.h>
 
@@ -15,7 +15,6 @@ const struct cmd_entry cmd_lua_entry = {
  .exec = cmd_aria_exec
 };
 
-ar_State *lisp_s = 0;
 ar_Value *traceback ( ar_State * S, ar_Frame * until )
 {
  ar_Value *res = NULL, **last = &res;
@@ -32,6 +31,7 @@ ar_Value *tl_pr_func ( ar_State * s, ar_Value * args )
  ar_Value *p = args;
 
  while( 1 ) {
+  ar_close_state ( lisp_s );
   size_t len;
   const char *str = ar_to_stringl ( s, ar_car ( p ), &len );
   cmdq_print ( aria_item, "%.*s", len, str );
@@ -74,29 +74,30 @@ int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
  struct args *args = cmd_get_args ( self );
 
  do {
-  if( lisp_s )
-   break;
+  ar_State *lisp_s = 0;
   lisp_s = ar_new_state ( 0, 0 );
   if( !lisp_s )
    break;
-  register_builtin ( lisp_s );
-  ar_bind_global ( lisp_s, "tmux.options.foreach",
-                   ar_new_cfunc ( lisp_s, tl_TOF_func ) );
-  ar_bind_global ( lisp_s, "tmux.display",
-                   ar_new_cfunc ( lisp_s, tl_pr_func ) );
+  do {
+   ar_bind_global ( lisp_s, "tmux.options.foreach",
+                    ar_new_cfunc ( lisp_s, tl_TOF_func ) );
+   ar_bind_global ( lisp_s, "tmux.display",
+                    ar_new_cfunc ( lisp_s, tl_pr_func ) );
+
+   if( args->argc && lisp_s ) {
+	char *fi_or_source = args->argv[0];
+
+	if( stat ( fi_or_source, NULL ) ) {
+	 ar_do_string ( lisp_s, fi_or_source );
+	} else {
+	 ar_do_file ( lisp_s, fi_or_source );
+	}
+   }
+  } while( 0 );
+  ar_close_state ( lisp_s );
  } while( 0 );
 
  int ret = CMD_RETURN_NORMAL;
-
- if( args->argc && lisp_s ) {
-  char *fi_or_source = args->argv[0];
-
-  if( stat ( fi_or_source, NULL ) ) {
-   ar_do_string ( lisp_s, fi_or_source );
-  } else {
-   ar_do_file ( lisp_s, fi_or_source );
-  }
- }
 
  return ret;
 }
