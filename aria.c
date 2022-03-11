@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646906875 */
+/*XXX This Document was modified on 1646981872 */
 /**
  * Copyright (c) 2018 rxi
  *
@@ -95,22 +95,6 @@ ar_Value *ar_new_pair ( ar_State * S, ar_Value * car, ar_Value * cdr )
  res->u.pair.cdr = cdr;
  res->u.pair.dbg = NULL;
  return res;
-}
-
-struct cmdq_item;
-struct cmdq_item *aria_item;
-
-extern void cmdq_print ( struct cmdq_item *, const char *, ... );
-
-void tm_printf ( const char *fmt, ... )
-{
- va_list args;
- va_start ( args, fmt );
- char *str;
- vasprintf ( &str, fmt, args );
- cmdq_print ( aria_item, "%s", str );
- free ( str );
- va_end ( args );
 }
 
 ar_Value *ar_new_list ( ar_State * S, size_t n, ... )
@@ -1084,7 +1068,7 @@ static ar_Value *f_type ( ar_State * S, ar_Value * args )
 static ar_Value *X_obj ( ar_State * s, ar_Value * a )
 {
  while( a ) {
-  tm_printf ( "%s\n", ar_type_str ( ar_type ( a ) ) );
+  printf ( "%s\n", ar_type_str ( ar_type ( a ) ) );
   if( !ar_cdr ( a ) )
    break;
   a = ar_cdr ( a );
@@ -1100,10 +1084,10 @@ static ar_Value *f_print ( ar_State * S, ar_Value * args )
   fwrite ( str, len, 1, stdout );
   if( !ar_cdr ( args ) )
    break;
-  tm_printf ( " " );
+  printf ( " " );
   args = ar_cdr ( args );
  }
- tm_printf ( "\n" );
+ printf ( "\n" );
  return ar_car ( args );
 }
 
@@ -1305,11 +1289,11 @@ static ar_Value *f_mod ( ar_State * S, ar_Value * args )
 
 static ar_Value *f_exit ( ar_State * S, ar_Value * args )
 {
- //exit ( ar_opt_number ( S, ar_car ( args ), EXIT_SUCCESS ) );
+ exit ( ar_opt_number ( S, ar_car ( args ), EXIT_SUCCESS ) );
  return NULL;
 }
 
-void register_builtin ( ar_State * S )
+static void register_builtin ( ar_State * S )
 {
  int i;
  /* Primitives */
@@ -1385,6 +1369,57 @@ void register_builtin ( ar_State * S )
  * State
  *===========================================================================*/
 
+static void *alloc_ ( void *udata, void *ptr, size_t size )
+{
+ UNUSED ( udata );
+ if( ptr && size == 0 ) {
+  free ( ptr );
+  return NULL;
+ }
+ return realloc ( ptr, size );
+}
+
+ar_State *ar_new_state ( ar_Alloc alloc, void *udata )
+{
+ ar_State *volatile S;
+ if( !alloc ) {
+  alloc = alloc_;
+ }
+ S = alloc ( udata, NULL, sizeof ( *S ) );
+ if( !S )
+  return NULL;
+ memset ( S, 0, sizeof ( *S ) );
+ S->alloc = alloc;
+ S->udata = udata;
+ S->frame = &S->base_frame;
+ /* We use the ar_try macro in case an out-of-memory error occurs -- you
+  * shouldn't usually return from inside the ar_try macro */
+ ar_try ( S, err, {
+          /* Init global env; add constants, primitives and funcs */
+          S->global = ar_new_env ( S, NULL );
+          S->oom_error = ar_new_string ( S, "out of memory" );
+          S->oom_args = ar_new_pair ( S, S->oom_error, NULL );
+          S->t = ar_new_symbol ( S, "t" );
+          ar_bind ( S, S->t, S->t, S->global );
+          ar_bind_global ( S, "global", S->global ); register_builtin ( S );}, {
+          UNUSED ( err ); ar_close_state ( S ); return NULL;}
+  );
+ return S;
+}
+
+void ar_close_state ( ar_State * S )
+{
+ gc_deinit ( S );
+ zfree ( S, S );
+}
+
+ar_CFunc ar_at_panic ( ar_State * S, ar_CFunc fn )
+{
+ ar_CFunc old = S->panic;
+ S->panic = fn;
+ return old;
+}
+
 void ar_error ( ar_State * S, ar_Value * err )
 {
  ar_Frame *f;
@@ -1427,24 +1462,18 @@ void ar_error ( ar_State * S, ar_Value * err )
    pop_frame ( S, args );
   S->panic ( S, args );
  } else {
-  cmdq_print ( aria_item, "\nerror: %s", ar_to_string ( S, err ) );
+  printf ( "error: %s\n", ar_to_string ( S, err ) );
   if( err != S->oom_error ) {
    ar_Value *v = traceback ( S, &S->base_frame );
-   cmdq_print ( aria_item, "traceback:\n" );
+   printf ( "traceback:\n" );
    while( v ) {
-	cmdq_print ( aria_item, "  [%s] %.50s",
-	             ar_to_string ( S, debug_location ( S, ar_car ( v ) ) ),
-	             ar_to_string ( S, ar_car ( v ) ) );
+	printf ( "  [%s] %.50s\n",
+	         ar_to_string ( S, debug_location ( S, ar_car ( v ) ) ),
+	         ar_to_string ( S, ar_car ( v ) ) );
 	v = ar_cdr ( v );
    }
   }
  }
-}
-
-void ar_close_state ( ar_State * S )
-{
- gc_deinit ( S );
- zfree ( S, S );
 }
 
 void ar_error_str ( ar_State * S, const char *fmt, ... )
@@ -1455,47 +1484,4 @@ void ar_error_str ( ar_State * S, const char *fmt, ... )
  vsprintf ( buf, fmt, args );
  va_end ( args );
  ar_error ( S, ar_new_string ( S, buf ) );
-}
-
-static void *alloc_ ( void *udata, void *ptr, size_t size )
-{
- UNUSED ( udata );
- if( ptr && size == 0 ) {
-  free ( ptr );
-  return NULL;
- }
- return realloc ( ptr, size );
-}
-
-ar_State *ar_new_state ( ar_Alloc alloc, void *udata )
-{
- ar_State *volatile S;
- if( !alloc ) {
-  alloc = alloc_;
- }
- S = alloc ( udata, NULL, sizeof ( *S ) );
- if( !S )
-  return NULL;
- memset ( S, 0, sizeof ( *S ) );
- S->alloc = alloc;
- S->udata = udata;
- S->frame = &S->base_frame;
- /* We use the ar_try macro in case an out-of-memory error occurs -- you
-  * shouldn't usually return from inside the ar_try macro */
- ar_try ( S, err, {
-          /* Init global env; add constants, primitives and funcs */
-          S->global = ar_new_env ( S, NULL );
-          S->oom_error = ar_new_string ( S, "out of memory" );
-          S->oom_args = ar_new_pair ( S, S->oom_error, NULL );
-          S->t = ar_new_symbol ( S, "t" );
-          ar_bind ( S, S->t, S->t, S->global );
-          ar_bind_global ( S, "global", S->global );
-          register_builtin ( S );
-          }, {
-          UNUSED ( err );
-          ar_close_state ( S );
-          return NULL;
-          }
-  );
- return S;
 }

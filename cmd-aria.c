@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646980590 */
+/*XXX This Document was modified on 1646980744 */
 #include <tmux.h>
 #include <string.h>
 
@@ -31,7 +31,6 @@ ar_Value *tl_pr_func ( ar_State * s, ar_Value * args )
  ar_Value *p = args;
 
  while( 1 ) {
-  ar_close_state ( lisp_s );
   size_t len;
   const char *str = ar_to_stringl ( s, ar_car ( p ), &len );
   cmdq_print ( aria_item, "%.*s", len, str );
