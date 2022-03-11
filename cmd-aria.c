@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646905985 */
+/*XXX This Document was modified on 1646910291 */
 #include <tmux.h>
 #include <string.h>
 
@@ -16,6 +16,16 @@ const struct cmd_entry cmd_lua_entry = {
 };
 
 ar_State *lisp_s = 0;
+ar_Value *traceback ( ar_State * S, ar_Frame * until )
+{
+ ar_Value *res = NULL, **last = &res;
+ ar_Frame *f = S->frame;
+ while( f != until ) {
+  last = ar_append_tail ( S, last, f->caller );
+  f = f->parent;
+ }
+ return res;
+}
 
 ar_Value *tl_pr_func ( ar_State * s, ar_Value * args )
 {
@@ -64,17 +74,28 @@ int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
  struct args *args = cmd_get_args ( self );
 
  do {
+  if( lisp_s )
+   break;
   lisp_s = ar_new_state ( 0, 0 );
   if( !lisp_s )
    break;
+  register_builtin ( lisp_s );
   ar_bind_global ( lisp_s, "tmux.options.foreach",
                    ar_new_cfunc ( lisp_s, tl_TOF_func ) );
   ar_bind_global ( lisp_s, "tmux.display",
                    ar_new_cfunc ( lisp_s, tl_pr_func ) );
  } while( 0 );
+
  int ret = CMD_RETURN_NORMAL;
+
  if( args->argc && lisp_s ) {
-  ar_do_string ( lisp_s, args->argv[0] );
+  char *fi_or_source = args->argv[0];
+
+  if( stat ( fi_or_source, NULL ) ) {
+   ar_do_string ( lisp_s, fi_or_source );
+  } else {
+   ar_do_file ( lisp_s, fi_or_source );
+  }
  }
 
  return ret;
