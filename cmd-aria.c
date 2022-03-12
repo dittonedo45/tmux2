@@ -1,5 +1,6 @@
-/*XXX This Document was modified on 1646986260 */
+/*XXX This Document was modified on 1647073002 */
 #include <tmux.h>
+#include <stdio.h>
 #include <string.h>
 
 static struct cmdq_item *aria_item = 0;;
@@ -42,7 +43,7 @@ ar_Value *traceback ( ar_State * s, ar_Frame * until )
  return res;
 }
 
-static ar_Value *char_ss_2 ( ar_State * s, char **v )
+static ar_Value *char_ss_2 ( ar_State * s, const char **v )
 {
 
  ar_Value *arg = 0;
@@ -53,6 +54,61 @@ static ar_Value *char_ss_2 ( ar_State * s, char **v )
   v++;
  }
  return arg;
+}
+
+static
+ar_Value *tl_TSF_func ( ar_State * s, ar_Value * args )
+{
+ struct session *ss;
+
+ RB_FOREACH ( ss, sessions, &sessions ) {
+  ar_Value *arg = ar_new_list ( s, 2,
+                                ( ar_new_string ( s, ss->name ) ),
+                                ( ar_new_string ( s, ss->cwd ) )
+       );
+
+  ar_Value *fun = ar_car ( args );
+  if( !fun || !( ar_type ( fun ) == AR_TFUNC || ar_type ( fun ) == AR_TCFUNC ) )
+   break;
+
+  ar_Value *nr = ar_call ( s, fun, arg );
+
+  if( ar_type ( nr ) != AR_TNUMBER ) {
+   int n = ar_to_number ( s, nr );
+
+   if( n )
+	break;
+  }
+ }
+ return ar_car ( args );
+}
+
+static
+ar_Value *tl_TCF_func ( ar_State * s, ar_Value * args )
+{
+ struct cmd_entry const **p = cmd_table;
+
+ while( p && *p && ( *p )->name ) {
+  ar_Value *arg = ar_new_list ( s, 2,
+                                ( ar_new_string ( s, ( *p )->name ) ),
+                                ( ar_new_string ( s, ( *p )->alias ) )
+       );
+
+  ar_Value *fun = ar_car ( args );
+  if( !fun || !( ar_type ( fun ) == AR_TFUNC || ar_type ( fun ) == AR_TCFUNC ) )
+   break;
+
+  ar_Value *nr = ar_call ( s, fun, arg );
+
+  if( ar_type ( nr ) != AR_TNUMBER ) {
+   int n = ar_to_number ( s, nr );
+
+   if( n )
+	break;
+  }
+  p++;
+ }
+ return ar_car ( args );
 }
 
 static
@@ -94,9 +150,11 @@ int tm_printf ( const char *str, ... )
  va_list ap;
  va_start ( ap, str );
  char *s = 0;
- vasprintf ( &s, str, ap );
- cmdq_print ( aria_item, "%s", s );
- free ( s );
+ int ret = vasprintf ( &s, str, ap );
+ if( !ret ) {
+  cmdq_print ( aria_item, "%s", s );
+  free ( s );
+ }
  va_end ( ap );
 
  return 0;
@@ -113,7 +171,10 @@ int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
   if( !lisp_s )
    break;
   do {
+   /* Tmux iterators for options, commands and sessions respectively. */
    ar_bind_global ( lisp_s, "t.o.f", ar_new_cfunc ( lisp_s, tl_TOF_func ) );
+   ar_bind_global ( lisp_s, "t.c.f", ar_new_cfunc ( lisp_s, tl_TCF_func ) );
+   ar_bind_global ( lisp_s, "t.s.f", ar_new_cfunc ( lisp_s, tl_TSF_func ) );
    ar_bind_global ( lisp_s, "t.p", ar_new_cfunc ( lisp_s, tl_pr_func ) );
 
    if( args->argc && lisp_s ) {
