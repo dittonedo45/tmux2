@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1646905986 */
+/*XXX This Document was modified on 1647239530 */
 /* $OpenBSD$ */
 
 /*
@@ -31,6 +31,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <libguile.h>
 
 #include "tmux.h"
 
@@ -313,7 +314,7 @@ const char *getversion ( void )
 
 extern struct cmdq_item *aria_item;
 
-int main ( int argc, char **argv )
+static void inner_main ( void *closure, int argc, char **argv )
 {
  char *path = NULL, *label = NULL;
  char *cause, **var;
@@ -503,4 +504,10 @@ int main ( int argc, char **argv )
 
  /* Pass control to the client. */
  exit ( client_main ( osdep_event_init (  ), argc, argv, flags, feat ) );
+}
+
+int main ( int argc, char **argv )
+{
+ scm_boot_guile ( argc, argv, inner_main, 0 );
+ return 0;
 }
