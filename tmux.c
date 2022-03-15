@@ -1,4 +1,4 @@
-/*XXX This Document was modified on 1647239530 */
+/*XXX This Document was modified on 1647254452 */
 /* $OpenBSD$ */
 
 /*
@@ -314,8 +314,10 @@ const char *getversion ( void )
 
 extern struct cmdq_item *aria_item;
 
-static void inner_main ( void *closure, int argc, char **argv )
+int main ( int argc, char **argv )
 {
+ scm_init_guile (  );
+
  char *path = NULL, *label = NULL;
  char *cause, **var;
  const char *s, *cwd;
@@ -503,11 +505,6 @@ static void inner_main ( void *closure, int argc, char **argv )
  free ( label );
 
  /* Pass control to the client. */
- exit ( client_main ( osdep_event_init (  ), argc, argv, flags, feat ) );
-}
 
-int main ( int argc, char **argv )
-{
- scm_boot_guile ( argc, argv, inner_main, 0 );
- return 0;
+ exit ( client_main ( osdep_event_init (  ), argc, argv, flags, feat ) );
 }

@@ -33,7 +33,7 @@
 
 #include "compat.h"
 #include "xmalloc.h"
-#include "aria.h"
+#include <libguile.h>
 
 extern char   **environ;
 
@@ -3104,7 +3104,5 @@ struct window_pane *spawn_pane(struct spawn_context *, char **);
 /* regsub.c */
 char		*regsub(const char *, const char *, const char *, int);
 
-/* cmd-lua */
-extern ar_State *lisp_s;
 
 #endif /* TMUX_H */

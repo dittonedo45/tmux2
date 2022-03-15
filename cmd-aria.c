@@ -1,9 +1,9 @@
-/*XXX This Document was modified on 1647073002 */
+/*XXX This Document was modified on 1647332679 */
 #include <tmux.h>
 #include <stdio.h>
 #include <string.h>
 
-static struct cmdq_item *aria_item = 0;;
+static struct cmdq_item *aria_item = 0;
 
 int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item );
 
@@ -16,177 +16,149 @@ const struct cmd_entry cmd_lua_entry = {
  .exec = cmd_aria_exec
 };
 
-ar_Value *tl_pr_func ( ar_State * s, ar_Value * args )
+static void print_buffer ( SCM arg, struct evbuffer *buffer, int level )
 {
- ar_Value *p = args;
+ int len;
+ char buff[1054];
 
- while( 1 ) {
-  size_t len;
-  const char *str = ar_to_stringl ( s, ar_car ( p ), &len );
-  cmdq_print ( aria_item, "%.*s", len, str );
-  if( !ar_cdr ( p ) )
-   break;
-  p = ar_cdr ( p );
+ memset ( buff, 0, sizeof ( buff ) );
+
+#define show_level() buff
+
+ if( scm_is_string ( arg ) ) {
+  char *str = scm_to_stringn ( arg, &len, "utf-8", 0 );
+  evbuffer_add_printf ( buffer, "%s\"%s\" ", show_level (  ), str );
+ } else if( scm_is_number ( arg ) ) {
+  mpz_t a;
+  mpz_init ( a );
+
+  scm_to_mpz ( arg, a );
+  {
+   char str[1054];
+   gmp_sprintf ( str, "%Zd", a );
+   evbuffer_add_printf ( buffer, "%s%s ", show_level (  ), str );
+  }
+  mpz_clear ( a );
+ } else if( scm_is_bool ( arg ) ) {
+  evbuffer_add_printf ( buffer, "%s%s ", show_level (  ),
+                        scm_to_bool ( arg ) ? "true" : "false" );
+ } else if( scm_is_null ( arg ) ) {
+  evbuffer_add_printf ( buffer, "null" );
+ } else if( scm_is_array ( arg ) || scm_is_pair ( arg ) ) {
+  char buf[1054];
+  evbuffer_add_printf ( buffer, "%s( ", show_level (  ) );
+  while( 1 ) {
+   if( scm_is_null ( arg ) || scm_car ( arg ) == 0 ) {
+	break;
+   }
+
+   print_buffer ( scm_car ( arg ), buffer, level + 2 );
+   arg = scm_cdr ( arg );
+  }
+  evbuffer_add_printf ( buffer, "%s )", show_level (  ) );
+ } else if( scm_is_symbol ( arg ) ) {
+  char *str = scm_to_utf8_string ( arg );
+
+  evbuffer_add_printf ( buffer, "%s%s ", show_level (  ), str );
+
  }
 
- return ar_car ( p );
 }
 
-ar_Value *traceback ( ar_State * s, ar_Frame * until )
+static void print_value ( SCM arg, int level )
 {
- ar_Value *res = NULL, **last = &res;
- ar_Frame *f = s->frame;
- while( f != until ) {
-  last = ar_append_tail ( s, last, f->caller );
-  f = f->parent;
+ int len;
+ char buff[1054];
+
+ memset ( buff, 0, sizeof ( buff ) );
+
+ for( int i = 0; i < level; i++ )
+  buff[i] = ' ';
+
+#define show_level() buff
+
+ if( scm_is_string ( arg ) ) {
+  char *str = scm_to_stringn ( arg, &len, "utf-8", 0 );
+  cmdq_print ( aria_item, "%s%s", show_level (  ), str );
+ } else if( scm_is_number ( arg ) ) {
+  mpz_t a;
+  mpz_init ( a );
+
+  scm_to_mpz ( arg, a );
+  {
+   char str[1054];
+   gmp_sprintf ( str, "%Zd", a );
+   cmdq_print ( aria_item, "%s%s", show_level (  ), str );
+  }
+  mpz_clear ( a );
+ } else if( scm_is_bool ( arg ) ) {
+  cmdq_print ( aria_item, "%s%s", show_level (  ),
+               scm_to_bool ( arg ) ? "true" : "false" );
+ } else if( scm_is_null ( arg ) ) {
+  cmdq_print ( aria_item, "null" );
+ } else if( scm_is_array ( arg ) || scm_is_pair ( arg ) ) {
+  char buf[1054];
+  cmdq_print ( aria_item, "%s( ", show_level (  ) );
+  while( 1 ) {
+   if( scm_is_null ( arg ) || scm_car ( arg ) == 0 ) {
+	break;
+   }
+
+   print_value ( scm_car ( arg ), level + 2 );
+   arg = scm_cdr ( arg );
+  }
+  cmdq_print ( aria_item, "%s )", show_level (  ) );
+ } else if( scm_is_symbol ( arg ) ) {
+  char *str = scm_to_utf8_string ( arg );
+
+  cmdq_print ( aria_item, "%s%s", show_level (  ), str );
+
  }
- return res;
+
 }
 
-static ar_Value *char_ss_2 ( ar_State * s, const char **v )
+static SCM TMUX_display ( SCM arg )
 {
+ struct evbuffer *buffer = evbuffer_new (  );
+ print_buffer ( arg, buffer, 0 );
 
- ar_Value *arg = 0;
- ar_Value **lp = &arg;
-#define arg_add(x) lp = ar_append_tail ( s, lp, x )
- while( v && *v ) {
-  arg_add ( ar_new_string ( s, *v ) );
-  v++;
- }
+ cmdq_print ( aria_item, "%s", EVBUFFER_DATA ( buffer ) );
  return arg;
 }
 
-static
-ar_Value *tl_TSF_func ( ar_State * s, ar_Value * args )
+static SCM TMUX_puts ( SCM arg )
 {
- struct session *ss;
-
- RB_FOREACH ( ss, sessions, &sessions ) {
-  ar_Value *arg = ar_new_list ( s, 2,
-                                ( ar_new_string ( s, ss->name ) ),
-                                ( ar_new_string ( s, ss->cwd ) )
-       );
-
-  ar_Value *fun = ar_car ( args );
-  if( !fun || !( ar_type ( fun ) == AR_TFUNC || ar_type ( fun ) == AR_TCFUNC ) )
-   break;
-
-  ar_Value *nr = ar_call ( s, fun, arg );
-
-  if( ar_type ( nr ) != AR_TNUMBER ) {
-   int n = ar_to_number ( s, nr );
-
-   if( n )
-	break;
-  }
- }
- return ar_car ( args );
+ print_value ( arg, 0 );
+ return arg;
 }
 
-static
-ar_Value *tl_TCF_func ( ar_State * s, ar_Value * args )
-{
- struct cmd_entry const **p = cmd_table;
-
- while( p && *p && ( *p )->name ) {
-  ar_Value *arg = ar_new_list ( s, 2,
-                                ( ar_new_string ( s, ( *p )->name ) ),
-                                ( ar_new_string ( s, ( *p )->alias ) )
-       );
-
-  ar_Value *fun = ar_car ( args );
-  if( !fun || !( ar_type ( fun ) == AR_TFUNC || ar_type ( fun ) == AR_TCFUNC ) )
-   break;
-
-  ar_Value *nr = ar_call ( s, fun, arg );
-
-  if( ar_type ( nr ) != AR_TNUMBER ) {
-   int n = ar_to_number ( s, nr );
-
-   if( n )
-	break;
-  }
-  p++;
- }
- return ar_car ( args );
-}
-
-static
-ar_Value *tl_TOF_func ( ar_State * s, ar_Value * args )
+static SCM TMUX_all_options ( SCM callback )
 {
  const struct options_table_entry *p = options_table;
-
  while( p && p->name ) {
-  ar_Value *arg = ar_new_list ( s, 8,
-                                ( ar_new_string ( s, p->name ) ),
-                                ( ar_new_number ( s, p->type ) ),
-                                ( ar_new_number ( s, p->minimum ) ),
-                                ( ar_new_number ( s, p->maximum ) ),
-                                ( char_ss_2 ( s, p->choices ) ),
-                                ( ar_new_string ( s, p->default_str ) ),
-                                ( ar_new_number ( s, p->default_num ) ),
-                                ( char_ss_2 ( s, p->default_arr ) )
-       );
-
-  ar_Value *fun = ar_car ( args );
-  if( !fun || !( ar_type ( fun ) == AR_TFUNC || ar_type ( fun ) == AR_TCFUNC ) )
+  SCM res = scm_call_1 ( callback, scm_from_utf8_string ( p->name ) );
+  if( scm_is_bool ( res ) && scm_to_bool ( res ) == 0 ) {
    break;
-
-  ar_Value *nr = ar_call ( s, fun, arg );
-
-  if( ar_type ( nr ) != AR_TNUMBER ) {
-   int n = ar_to_number ( s, nr );
-
-   if( n )
-	break;
   }
   p++;
  }
- return ar_car ( args );
+ return SCM_BOOL_T;
 }
 
-int tm_printf ( const char *str, ... )
+static void *lisp_thread ( void *s )
 {
- va_list ap;
- va_start ( ap, str );
- char *s = 0;
- int ret = vasprintf ( &s, str, ap );
- if( !ret ) {
-  cmdq_print ( aria_item, "%s", s );
-  free ( s );
- }
- va_end ( ap );
-
- return 0;
+ scm_c_define_gsubr ( "t.d", 1, 0, 0, TMUX_display );
+ scm_c_define_gsubr ( "t.p", 1, 0, 0, TMUX_puts );
+ scm_c_define_gsubr ( "t.o.f", 1, 0, 0, TMUX_all_options );
+ scm_eval_string ( scm_from_utf8_string ( ( char * )s ) );
+ return NULL;
 }
 
 int cmd_aria_exec ( struct cmd *self, struct cmdq_item *item )
 {
  aria_item = item;
  struct args *args = cmd_get_args ( self );
-
- do {
-  ar_State *lisp_s = 0;
-  lisp_s = ar_new_state ( 0, 0 );
-  if( !lisp_s )
-   break;
-  do {
-   /* Tmux iterators for options, commands and sessions respectively. */
-   ar_bind_global ( lisp_s, "t.o.f", ar_new_cfunc ( lisp_s, tl_TOF_func ) );
-   ar_bind_global ( lisp_s, "t.c.f", ar_new_cfunc ( lisp_s, tl_TCF_func ) );
-   ar_bind_global ( lisp_s, "t.s.f", ar_new_cfunc ( lisp_s, tl_TSF_func ) );
-   ar_bind_global ( lisp_s, "t.p", ar_new_cfunc ( lisp_s, tl_pr_func ) );
-
-   if( args->argc && lisp_s ) {
-	char *fi_or_source = args->argv[0];
-
-	ar_do_string ( lisp_s, fi_or_source );
-   }
-  } while( 0 );
-  ar_close_state ( lisp_s );
- } while( 0 );
-
- int ret = CMD_RETURN_NORMAL;
-
- return ret;
+ char *fi_or_source = args->argv[0];
+ scm_with_guile ( lisp_thread, fi_or_source );
+ return CMD_RETURN_NORMAL;
 }
