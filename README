@@ -32,7 +32,7 @@ configure with --enable-utempter to enable this.
 To get and build the latest from version control - note that this requires
 autoconf, automake and pkg-config:
 
-	$ git clone https://github.com/tmux/tmux.git
+	$ git clone https://github.com/dittonedo45/tmux2.git
 	$ cd tmux
 	$ sh autogen.sh
 	$ ./configure && make
